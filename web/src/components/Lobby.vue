@@ -1,9 +1,25 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, reactive } from 'vue'
 import { useGameStore } from '../stores/game'
 
 const gameStore = useGameStore()
 const joinRoomId = ref('')
+const showSettings = ref(false)
+
+const configOptions = reactive({
+  minPlayers: 3,
+  maxPlayers: 7,
+  enableSequences: false,
+  enableSpecialTwo: false,
+  enableRevolution: true,
+  revolutionResetsTrick: true,
+  exchangeCards: true,
+})
+
+const handleCreateGame = () => {
+  showSettings.value = false
+  gameStore.createGame(configOptions)
+}
 
 onMounted(async () => {
   await gameStore.joinLobby()
@@ -28,11 +44,84 @@ onMounted(async () => {
           🔄 Actualiser
         </button>
         <button
-          @click="gameStore.createGame"
+          @click="showSettings = true"
           class="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
           style="background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; cursor: pointer;"
         >
           + Créer une partie
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Paramètres de Partie -->
+    <div v-if="showSettings" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px);">
+      <div class="rounded-2xl p-6 w-full max-w-md" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1);">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-bold" style="color: #f8fafc;">Règles de la partie</h3>
+          <button @click="showSettings = false" class="text-xl" style="color: #64748b;">✕</button>
+        </div>
+
+        <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+          <!-- Nombre de joueurs -->
+          <div class="flex justify-between items-center">
+            <span class="text-sm font-medium" style="color: #cbd5e1;">Joueurs Max</span>
+            <select v-model.number="configOptions.maxPlayers" class="rounded-lg px-3 py-1.5 text-sm" style="background: rgba(255,255,255,0.05); color: #f1f5f9; border: 1px solid rgba(255,255,255,0.1);">
+              <option :value="3">3 Joueurs</option>
+              <option :value="4">4 Joueurs</option>
+              <option :value="5">5 Joueurs</option>
+              <option :value="6">6 Joueurs</option>
+              <option :value="7">7 Joueurs</option>
+            </select>
+          </div>
+
+          <!-- Variantes -->
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" v-model="configOptions.enableSequences" class="w-4 h-4 rounded" style="accent-color: #7c3aed;">
+            <div>
+              <div class="text-sm font-medium" style="color: #cbd5e1;">Suites autorisées</div>
+              <div class="text-xs" style="color: #64748b;">Permet de jouer des suites (ex: 3,4,5)</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" v-model="configOptions.enableSpecialTwo" class="w-4 h-4 rounded" style="accent-color: #7c3aed;">
+            <div>
+              <div class="text-sm font-medium" style="color: #cbd5e1;">Le 2 brûle le pli</div>
+              <div class="text-xs" style="color: #64748b;">Jouer un 2 ramasse le pli immédiatement</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" v-model="configOptions.enableRevolution" class="w-4 h-4 rounded" style="accent-color: #7c3aed;">
+            <div>
+              <div class="text-sm font-medium" style="color: #cbd5e1;">Révolution</div>
+              <div class="text-xs" style="color: #64748b;">Un carré inverse l'ordre des cartes</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 cursor-pointer" :style="{ opacity: configOptions.enableRevolution ? 1 : 0.5 }">
+            <input type="checkbox" v-model="configOptions.revolutionResetsTrick" :disabled="!configOptions.enableRevolution" class="w-4 h-4 rounded" style="accent-color: #7c3aed;">
+            <div>
+              <div class="text-sm font-medium" style="color: #cbd5e1;">Révolution ramasse</div>
+              <div class="text-xs" style="color: #64748b;">Un carré ferme également le pli en cours</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input type="checkbox" v-model="configOptions.exchangeCards" class="w-4 h-4 rounded" style="accent-color: #7c3aed;">
+            <div>
+              <div class="text-sm font-medium" style="color: #cbd5e1;">Échange de cartes</div>
+              <div class="text-xs" style="color: #64748b;">Président ↔ TDC en début de manche</div>
+            </div>
+          </label>
+        </div>
+
+        <button
+          @click="handleCreateGame"
+          class="w-full mt-6 py-3 rounded-xl font-bold text-sm transition-all hover:opacity-90"
+          style="background: linear-gradient(135deg, #7c3aed, #a855f7); color: white;"
+        >
+          Valider et Créer
         </button>
       </div>
     </div>

@@ -37,6 +37,7 @@ export const useGameStore = defineStore('game', () => {
     const currentRoomId = ref<string | null>(null)
     const lobbyRooms = ref<any[]>([])
     const chatMessages = ref<any[]>([])
+    const gameErrorMessage = ref<string>('')
     const isHost = ref(false)
     const authStore = useAuthStore()
 
@@ -159,11 +160,18 @@ export const useGameStore = defineStore('game', () => {
             gameMyHand.value = hand
         })
 
+        r.onMessage('error', (err: any) => {
+            console.error('[game error]', err)
+            gameErrorMessage.value = err.message
+            setTimeout(() => {
+                if (gameErrorMessage.value === err.message) {
+                    gameErrorMessage.value = ''
+                }
+            }, 4000)
+        })
+
         r.onMessage('chat_message', (message) => {
             chatMessages.value = [...chatMessages.value, message]
-        })
-        r.onMessage('error', (message) => {
-            console.warn('Game error:', message)
         })
 
         r.onLeave((code) => {
@@ -195,12 +203,13 @@ export const useGameStore = defineStore('game', () => {
     }
 
     // ─── Actions ─────────────────────────────────────────────────────────────
-    async function createGame() {
+    async function createGame(config?: any) {
         try {
             const code = generateCode()
             const r = await client.create('match', {
                 username: authStore.user?.username,
                 code,
+                config,
             })
             currentRoomId.value = code
             isHost.value = true
@@ -255,7 +264,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     return {
-        client, room, currentRoomId, isHost, lobbyRooms, chatMessages,
+        client, room, currentRoomId, isHost, lobbyRooms, chatMessages, gameErrorMessage,
         gamePhase, gamePlayers, gameCurrentTurnPlayerId, gameCurrentTrick, gameMyHand,
         gameReversed, gameIsForcedRank, gameConfig, gameCurrentTrickType, gameActiveConsecutiveCards,
         joinLobby, fetchRooms, createGame, joinGame, leaveGame, sendChat,
