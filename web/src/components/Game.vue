@@ -11,18 +11,37 @@ const showGameSettings = ref(false)
 
 // ── All data comes from reactive store refs — no more reading room.state ───
 const mySessionId = computed(() => gameStore.room?.sessionId ?? '')
-const players = computed(() => gameStore.gamePlayers)
+const players = computed(() => {
+  const roleOrder: Record<string, number> = {
+    PRESIDENT: 1,
+    VICE_PRESIDENT: 2,
+    NEUTRE: 3,
+    VICE_TDC: 4,
+    TDC: 5
+  }
+  return [...gameStore.gamePlayers].sort((a, b) => {
+    const valA = roleOrder[a.role] || 99
+    const valB = roleOrder[b.role] || 99
+    return valA - valB
+  })
+})
 const me = computed(() => players.value.find(p => p.isMe))
+const amISpectator = computed(() => me.value?.isSpectator === true)
 const myHand = computed(() => gameStore.gameMyHand)
 const currentTrick = computed(() => gameStore.gameCurrentTrick)
 const currentTurnPlayerId = computed(() => gameStore.gameCurrentTurnPlayerId)
 const phase = computed(() => gameStore.gamePhase)
-const isMyTurn = computed(() => currentTurnPlayerId.value !== '' && currentTurnPlayerId.value === mySessionId.value)
-
-const NORMAL_ORDER = ["3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A", "2"];
+const isMyTurn = computed(() => !amISpectator.value && currentTurnPlayerId.value !== '' && currentTurnPlayerId.value === mySessionId.value)
 
 function getCardValue(rank: string) {
-  return NORMAL_ORDER.indexOf(rank);
+  const baseOrder = ["3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"];
+  if (gameStore.gameReversed) {
+    if (rank === "2") return -1;
+    const index = baseOrder.indexOf(rank);
+    return 11 - index;
+  }
+  if (rank === "2") return 12;
+  return baseOrder.indexOf(rank);
 }
 
 function isPlayable(card: any) {
@@ -54,15 +73,25 @@ function isPlayable(card: any) {
     }
   }
 
+  // Special 2 cuts anything
+  if (config?.enableSpecialTwo && card.rank === "2") {
+    return true;
+  }
+
+  const trickType = gameStore.gameCurrentTrickType;
+
+  // Sequence on sequence: any card that's >= the highest trick card value
+  if (trickType === 'sequence' && config?.enableSequences) {
+    const cardVal = getCardValue(card.rank);
+    const trickValues = currentTrick.value.map((c: any) => getCardValue(c.rank));
+    const trickMin = Math.min(...trickValues);
+    return cardVal >= trickMin;
+  }
+
   // Normal play: need enough cards of same rank to match trick size
   const countInHand = myHand.value.filter((c: any) => c.rank === card.rank).length;
   if (countInHand < currentTrick.value.length) {
       return false;
-  }
-
-  // Special 2 cuts anything
-  if (config?.enableSpecialTwo && card.rank === "2") {
-    return true;
   }
 
   // Must be >= trick value
@@ -75,8 +104,6 @@ function isPlayable(card: any) {
 
 const hasPlayableCards = computed(() => {
     if (!isMyTurn.value || myHand.value.length === 0) return false;
-    // We check if at least one subset of our hand could legally be played.
-    // For simplicity, if they can't even play a single card or special 2, they definitely must pass.
     return myHand.value.some(card => isPlayable(card));
 });
 
@@ -88,7 +115,6 @@ watch([isMyTurn, hasPlayableCards, phase, myHand], ([myTurn, hasCards, currentPh
         autoPassTimer = null;
     }
 
-    // Only start timer if it's our turn, we are in PLAY phase, we actually hold cards (hand synced), and we have NO playable cards.
     if (myTurn && currentPhase === 'PLAY' && hand.length > 0 && !hasCards) {
         autoPassTimer = setTimeout(() => {
             if (isMyTurn.value && phase.value === 'PLAY' && !hasPlayableCards.value) {
@@ -122,20 +148,32 @@ const turnProgress = computed(() => {
 })
 
 function toggleCard(card: any) {
+  // Strict guard: must be my turn and card must be playable — no way to bypass
   if (!isMyTurn.value || !isPlayable(card)) return
   const key = `${card.suit}-${card.rank}`
   const idx = selectedCards.value.findIndex((c: any) => `${c.suit}-${c.rank}` === key)
   
   if (idx === -1) {
-    if (selectedCards.value.length === 0 || selectedCards.value[0].rank !== card.rank) {
+    const config = gameStore.gameConfig
+    const sequencesEnabled = config?.enableSequences
+
+    if (selectedCards.value.length === 0) {
       selectedCards.value = [card]
-    } else {
+    } else if (sequencesEnabled && selectedCards.value[0].rank !== card.rank) {
+      const tempCards = [...selectedCards.value, card]
+      const values = tempCards.map((c: any) => getCardValue(c.rank)).sort((a: number, b: number) => a - b)
+      const uniqueRanks = new Set(tempCards.map((c: any) => c.rank))
+      const isConsecutive = values.every((v: number, i: number) => i === 0 || v === values[i - 1] + 1)
+      if (uniqueRanks.size === tempCards.length && isConsecutive) {
+        selectedCards.value = [...tempCards]
+      } else {
+        selectedCards.value = [card]
+      }
+    } else if (selectedCards.value[0].rank === card.rank) {
       const consecutiveCards = gameStore.gameActiveConsecutiveCards;
       const trickRank = currentTrick.value.length > 0 ? currentTrick.value[0].rank : null;
       let limit = 4;
-
       if (trickRank && card.rank === trickRank && consecutiveCards >= 1) {
-        // Quad completion: allow up to (4 - consecutive) cards
         limit = 4 - consecutiveCards;
       } else if (currentTrick.value.length > 0 && card.rank !== '2') {
         limit = currentTrick.value.length;
@@ -143,9 +181,11 @@ function toggleCard(card: any) {
       if (selectedCards.value.length < limit) {
         selectedCards.value = [...selectedCards.value, card]
       }
+    } else {
+      selectedCards.value = [card]
     }
   } else {
-    selectedCards.value = selectedCards.value.filter((_, i) => i !== idx)
+    selectedCards.value = selectedCards.value.filter((_: any, i: number) => i !== idx)
   }
 }
 
@@ -153,8 +193,15 @@ function isSelected(card: any) {
   return selectedCards.value.some(c => c.suit === card.suit && c.rank === card.rank)
 }
 
+// Strict: only allow play if isMyTurn AND all selected are still playable
+const canPlay = computed(() =>
+  isMyTurn.value &&
+  selectedCards.value.length > 0 &&
+  selectedCards.value.every((c: any) => isPlayable(c))
+)
+
 function playSelected() {
-  if (selectedCards.value.length === 0 || !isMyTurn.value) return
+  if (!canPlay.value) return
   gameStore.room?.send('play_card', { cards: selectedCards.value })
   selectedCards.value = []
 }
@@ -188,8 +235,11 @@ const roleIcons: Record<string, string> = {
 }
 
 function getMmrText(role: string) {
-  if (role === 'PRESIDENT' || role === 'VICE_PRESIDENT') return '+30 MMR'
-  if (role === 'TDC' || role === 'VICE_TDC') return '-30 MMR'
+  if (role === 'PRESIDENT') return '+30 MMR'
+  if (role === 'VICE_PRESIDENT') return '+15 MMR'
+  if (role === 'NEUTRE') return '+0 MMR'
+  if (role === 'VICE_TDC') return '-15 MMR'
+  if (role === 'TDC') return '-30 MMR'
   return '+0 MMR'
 }
 
@@ -218,6 +268,45 @@ function initSortable() {
   }
 }
 
+// ── Exchange phase ──────────────────────────────────────────────────────────
+const exchangeSelectedCards = ref<any[]>([])
+
+const isExchangePhase = computed(() => phase.value === 'EXCHANGE')
+const myExchangeRequest = computed(() => gameStore.gameExchangeRequest)
+
+function toggleExchangeCard(card: any) {
+  const key = `${card.suit}-${card.rank}`
+  const idx = exchangeSelectedCards.value.findIndex((c: any) => `${c.suit}-${c.rank}` === key)
+  
+  if (idx === -1) {
+    const count = myExchangeRequest.value?.count || 0
+    if (exchangeSelectedCards.value.length < count) {
+      exchangeSelectedCards.value = [...exchangeSelectedCards.value, card]
+    }
+  } else {
+    exchangeSelectedCards.value = exchangeSelectedCards.value.filter((_: any, i: number) => i !== idx)
+  }
+}
+
+function isExchangeSelected(card: any) {
+  return exchangeSelectedCards.value.some(c => c.suit === card.suit && c.rank === card.rank)
+}
+
+function submitExchange() {
+  if (!myExchangeRequest.value) return
+  if (exchangeSelectedCards.value.length !== myExchangeRequest.value.count) return
+  if (gameStore.exchangeSubmitted) return  // Guard: prevent double-submit
+  gameStore.exchangeSubmitted = true
+  gameStore.room?.send('exchange_select', { cards: exchangeSelectedCards.value })
+  exchangeSelectedCards.value = []
+  // Don't null gameExchangeRequest manually — let state_update from server do it
+}
+
+// Clear exchange selection when exchange phase ends
+watch(isExchangePhase, (val) => {
+  if (!val) exchangeSelectedCards.value = []
+})
+
 watch(() => myHand.value.length, async () => {
   await nextTick()
   initSortable()
@@ -245,20 +334,41 @@ onBeforeUnmount(() => {
       clearInterval(timerInterval)
   }
 })
+
+// ── Game event style map ───────────────────────────────────────────────────
+const eventStyles: Record<string, { bg: string; border: string; glow: string; textColor: string }> = {
+  quad:       { bg: 'rgba(239,68,68,0.2)',   border: 'rgba(239,68,68,0.7)',   glow: '0 0 60px rgba(239,68,68,0.6)',   textColor: '#fca5a5' },
+  revolution: { bg: 'rgba(139,92,246,0.2)',  border: 'rgba(139,92,246,0.7)',  glow: '0 0 60px rgba(139,92,246,0.6)',  textColor: '#c4b5fd' },
+  president:  { bg: 'rgba(245,158,11,0.2)',  border: 'rgba(245,158,11,0.7)',  glow: '0 0 60px rgba(245,158,11,0.6)',  textColor: '#fde68a' },
+  tdc:        { bg: 'rgba(100,116,139,0.2)', border: 'rgba(100,116,139,0.7)', glow: '0 0 60px rgba(100,116,139,0.6)', textColor: '#cbd5e1' },
+}
+const currentEventStyle = computed(() => {
+  if (!gameStore.gameEvent) return null
+  return eventStyles[gameStore.gameEvent.type] || eventStyles.quad
+})
 </script>
 
 <template>
   <div class="flex flex-col h-screen overflow-hidden" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%); position: relative;">
     
-    <!-- Toast d'erreur -->
-    <Transition name="fade-down">
-      <div v-if="gameStore.gameErrorMessage"
-        class="absolute top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl"
-        style="background: rgba(220, 38, 38, 0.9); backdrop-filter: blur(10px); border: 1px solid rgba(255,165,165,0.4);">
-        <span class="text-xl">⚠️</span>
-        <span class="font-bold text-white tracking-wide">{{ gameStore.gameErrorMessage }}</span>
-      </div>
-    </Transition>
+
+
+    <!-- ── System Notifications — Toast bottom-left ─────────────────────── -->
+    <div class="absolute bottom-4 left-4 z-50 flex flex-col gap-2 pointer-events-none" style="max-width: 340px; width: 100%;">
+      <TransitionGroup name="toast">
+        <div v-for="notif in gameStore.systemNotifications" :key="notif.id"
+          class="px-4 py-3 rounded-xl flex items-start gap-3 shadow-2xl border pointer-events-auto backdrop-blur-md"
+          :style="notif.sender === '👑 Président' 
+            ? 'background: rgba(245, 158, 11, 0.18); border-color: rgba(245, 158, 11, 0.45); box-shadow: 0 8px 32px rgba(245, 158, 11, 0.2); color: #fef3c7;' 
+            : 'background: rgba(99, 102, 241, 0.18); border-color: rgba(99, 102, 241, 0.35); box-shadow: 0 8px 32px rgba(99, 102, 241, 0.15); color: #e0e7ff;'">
+          <span class="text-xl leading-none select-none mt-0.5 flex-shrink-0">{{ notif.sender === '👑 Président' ? '👑' : '⚡' }}</span>
+          <div class="flex-1 min-w-0">
+            <span class="block font-black uppercase tracking-widest opacity-70 mb-0.5" style="font-size: 0.6rem;">{{ notif.sender }}</span>
+            <p class="text-sm font-semibold text-white leading-snug break-words">{{ notif.text }}</p>
+          </div>
+        </div>
+      </TransitionGroup>
+    </div>
 
     <!-- Background abstract shapes -->
     <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-40">
@@ -282,6 +392,13 @@ onBeforeUnmount(() => {
           class="text-xs text-slate-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1 bg-white/5 px-2 py-1 rounded-lg">
           <span>⚙️ Paramètres</span>
         </button>
+
+        <!-- Spectator badge -->
+        <div v-if="amISpectator"
+          class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold animate-pulse"
+          style="background: rgba(255,255,255,0.08); color: #94a3b8; border: 1px solid rgba(255,255,255,0.15);">
+          👁️ Mode Spectateur
+        </div>
       </div>
       <div class="flex gap-3">
         <button @click="showRules = true"
@@ -312,19 +429,39 @@ onBeforeUnmount(() => {
         <!-- All players -->
         <div class="flex justify-center gap-3 px-4 py-4 flex-wrap" style="flex-shrink: 0;">
           <div v-for="player in players" :key="player.id"
-            class="flex items-center gap-2 px-4 py-2 rounded-full relative overflow-hidden transition-all duration-300"
+            class="flex items-center gap-2 px-3 py-1.5 rounded-full relative overflow-hidden transition-all duration-300"
             :style="{
               background: player.id === currentTurnPlayerId ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.2)',
               backdropFilter: 'blur(8px)',
               border: player.id === currentTurnPlayerId ? '1px solid rgba(255,255,255,0.4)' : '1px solid rgba(255,255,255,0.05)',
               boxShadow: player.id === currentTurnPlayerId ? '0 0 20px rgba(236,72,153,0.3)' : 'none',
-              transform: player.id === currentTurnPlayerId ? 'scale(1.05)' : 'scale(1)'
+              transform: player.id === currentTurnPlayerId ? 'scale(1.05)' : 'scale(1)',
+              opacity: player.isSpectator ? '0.65' : '1'
             }">
-            <span class="text-base">{{ player.role && player.role !== 'NEUTRE' ? roleIcons[player.role] : '👤' }}</span>
+            
+            <!-- Avatar -->
+            <div class="relative">
+              <div v-if="player.avatarUrl" class="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/20">
+                <img :src="player.avatarUrl.startsWith('http') ? player.avatarUrl : `http://localhost:3000${player.avatarUrl}`" :alt="player.username" class="w-full h-full object-cover" @error="(e: any) => e.target.style.display='none'" />
+              </div>
+              <div v-else class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ring-1 ring-white/20"
+                   style="background: linear-gradient(135deg, #7c3aed44, #a855f744); color: #c4b5fd;">
+                {{ (player.username || '?').slice(0, 2).toUpperCase() }}
+              </div>
+              <!-- Role Icon Overlay -->
+              <div v-if="player.role && player.role !== 'NEUTRE'" class="absolute -bottom-1 -right-1 text-xs" style="text-shadow: 0 0 4px rgba(0,0,0,0.8);">
+                {{ roleIcons[player.role] }}
+              </div>
+              <div v-else-if="player.isSpectator" class="absolute -bottom-1 -right-1 text-xs" style="text-shadow: 0 0 4px rgba(0,0,0,0.8);">
+                👁️
+              </div>
+            </div>
+
             <span class="text-sm font-semibold" style="color: #f8fafc;">
               {{ player.username }}<span v-if="player.isMe" style="color: #f472b6;"> (moi)</span>
+              <span v-if="player.isSpectator" class="text-xs ml-1.5 font-medium" style="color: #64748b;">👁️ Spec.</span>
             </span>
-            <span class="text-xs font-mono px-2 py-0.5 rounded-full" style="background: rgba(0,0,0,0.4); color: #cbd5e1;">{{ player.handCount }}</span>
+            <span v-if="!player.isSpectator" class="text-xs font-mono px-2 py-0.5 rounded-full" style="background: rgba(0,0,0,0.4); color: #cbd5e1;">{{ player.handCount }}</span>
             <div v-if="player.id === currentTurnPlayerId && phase === 'PLAY'" 
                  class="absolute bottom-0 left-0 h-1 transition-all duration-100 ease-linear rounded-full"
                  :style="{ 
@@ -336,36 +473,90 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Center table -->
-        <div class="flex-1 flex flex-col items-center justify-center gap-6 min-h-0">
-
-          <!-- "Ou rien" indicator -->
-          <Transition name="ourien">
-            <div v-if="gameStore.gameIsForcedRank && phase === 'PLAY'"
-              class="px-6 py-2.5 rounded-full text-base font-black tracking-widest pointer-events-none uppercase"
-              style="background: rgba(220, 38, 38, 0.2); backdrop-filter: blur(8px); border: 2px solid rgba(239,68,68,0.6); color: #fca5a5; text-shadow: 0 0 15px rgba(239,68,68,0.8); box-shadow: 0 0 30px rgba(239,68,68,0.2);">
-              🔒 {{ gameStore.gameIsForcedRank }} ou rien
+        <div class="flex-1 flex flex-col items-center justify-center p-8 relative">
+          
+          <!-- ── Cinematic Game Events (Centered on table) ───────────────────── -->
+          <Transition name="cinematic">
+            <div v-if="gameStore.gameEvent" 
+                 class="absolute inset-0 z-40 flex items-center justify-center pointer-events-none overflow-hidden">
+              <div class="flex flex-col items-center justify-center cinematic-content">
+                <span class="text-[8rem] leading-none mb-4 filter drop-shadow-[0_0_30px_rgba(255,255,255,0.5)]">{{ gameStore.gameEvent.icon }}</span>
+                <span class="text-6xl font-black uppercase tracking-[0.2em] text-transparent bg-clip-text text-center px-4"
+                  :style="gameStore.gameEvent.type === 'revolution' ? 'background-image: linear-gradient(to right, #f43f5e, #9f1239); text-shadow: 0 0 40px rgba(244,63,94,0.6);' : 
+                          gameStore.gameEvent.type === 'carre' ? 'background-image: linear-gradient(to right, #fbbf24, #d97706); text-shadow: 0 0 40px rgba(251,191,36,0.6);' :
+                          gameStore.gameEvent.type === 'president' ? 'background-image: linear-gradient(to bottom, #ffd700, #b8860b); text-shadow: 0 0 40px rgba(255,215,0,0.6);' :
+                          'background-image: linear-gradient(to right, #a8a29e, #57534e); text-shadow: 0 0 40px rgba(120,113,108,0.6);'">
+                  {{ gameStore.gameEvent.text }}
+                </span>
+              </div>
             </div>
           </Transition>
 
           <div class="rounded-3xl flex items-center justify-center relative transition-all duration-300"
             style="width: 280px; height: 180px; background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); box-shadow: inset 0 0 20px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.3);"
             :style="gameStore.gameIsForcedRank ? 'border-color: rgba(239,68,68,0.5); box-shadow: inset 0 0 30px rgba(239,68,68,0.2), 0 10px 30px rgba(0,0,0,0.3);' : ''">
-            <div v-if="currentTrick.length > 0" class="flex gap-2">
-              <div v-for="(card, idx) in currentTrick" :key="idx"
-                class="rounded-xl flex flex-col items-center justify-center"
-                style="width: 56px; height: 80px; background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); border: 1px solid #cbd5e1; box-shadow: 0 4px 15px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255,255,255,1);">
-                <span class="font-black text-lg leading-none" :style="{ color: isRed(card.suit) ? '#ef4444' : '#0f172a' }">{{ card.rank }}</span>
-                <span class="text-2xl leading-none mt-1" :style="{ color: isRed(card.suit) ? '#ef4444' : '#0f172a' }">{{ getSuitSymbol(card.suit) }}</span>
+            
+            <Transition name="ourien">
+              <div v-if="gameStore.gameIsForcedRank && phase === 'PLAY'"
+                class="ourien-badge absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30 px-6 py-2.5 rounded-full text-base font-black tracking-widest pointer-events-none uppercase"
+                style="background: rgba(220, 38, 38, 0.2); backdrop-filter: blur(8px); border: 2px solid rgba(239,68,68,0.6); color: #fca5a5; text-shadow: 0 0 15px rgba(239,68,68,0.8); box-shadow: 0 0 30px rgba(239,68,68,0.2); margin-top: -10px;">
+                🔒 {{ gameStore.gameIsForcedRank }} ou rien
               </div>
+            </Transition>
+
+            <div v-if="currentTrick.length > 0">
+              <TransitionGroup name="trick-card" class="flex gap-2" tag="div">
+                <div v-for="(card, idx) in currentTrick" :key="`${card.suit}-${card.rank}-${idx}`"
+                  class="rounded-xl flex flex-col items-center justify-center trick-card-item"
+                  style="width: 56px; height: 80px; background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%); border: 1px solid #cbd5e1; box-shadow: 0 4px 15px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255,255,255,1);"
+                  :style="{ animationDelay: `${idx * 80}ms` }">
+                  <span class="font-black text-lg leading-none" :style="{ color: isRed(card.suit) ? '#ef4444' : '#0f172a' }">{{ card.rank }}</span>
+                  <span class="text-2xl leading-none mt-1" :style="{ color: isRed(card.suit) ? '#ef4444' : '#0f172a' }">{{ getSuitSymbol(card.suit) }}</span>
+                </div>
+              </TransitionGroup>
             </div>
             <div v-else class="text-sm font-medium tracking-wide uppercase pointer-events-none" style="color: rgba(255,255,255,0.2);">Tapis vide</div>
           </div>
 
+          <!-- Exchange phase indicator -->
+          <div v-if="isExchangePhase && myExchangeRequest && !gameStore.exchangeSubmitted"
+            class="flex flex-col items-center gap-3">
+            <div class="px-6 py-3 rounded-2xl text-center"
+              style="background: rgba(251,191,36,0.15); backdrop-filter: blur(8px); border: 2px solid rgba(251,191,36,0.5);">
+              <div class="text-lg font-bold" style="color: #fbbf24;">🔄 Échange de cartes</div>
+              <div class="text-sm mt-1" style="color: #fde68a;">
+                Sélectionnez {{ myExchangeRequest.count }} carte(s) à donner
+              </div>
+              <div class="text-xs mt-1" style="color: #94a3b8;">
+                ({{ exchangeSelectedCards.length }} / {{ myExchangeRequest.count }} sélectionnée(s))
+              </div>
+            </div>
+            <button v-if="exchangeSelectedCards.length === myExchangeRequest.count"
+              @click="submitExchange"
+              class="px-6 py-2.5 rounded-xl font-black text-sm uppercase tracking-wide transition-all hover:scale-105"
+              style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white; cursor: pointer; box-shadow: 0 6px 20px rgba(245,158,11,0.4);">
+              Confirmer l'échange
+            </button>
+          </div>
+
+          <div v-else-if="isExchangePhase && myExchangeRequest && gameStore.exchangeSubmitted"
+            class="px-6 py-3 rounded-2xl text-center"
+            style="background: rgba(16,185,129,0.1); backdrop-filter: blur(8px); border: 1px solid rgba(16,185,129,0.3);">
+            <div class="text-sm font-semibold" style="color: #6ee7b7;">✅ Échange soumis — en attente des autres...</div>
+          </div>
+
+          <div v-else-if="isExchangePhase && !myExchangeRequest"
+            class="px-6 py-3 rounded-2xl text-center"
+            style="background: rgba(255,255,255,0.05); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);">
+            <div class="text-sm" style="color: #94a3b8;">⏳ En attente des échanges...</div>
+          </div>
+
           <!-- Actions -->
-          <div v-if="phase === 'PLAY'" class="flex gap-4 items-center">
+          <div v-if="phase === 'PLAY' && !amISpectator" class="flex gap-4 items-center">
             <div v-if="isMyTurn" class="text-xs px-4 py-1.5 rounded-full font-bold uppercase tracking-wider animate-pulse"
               style="background: rgba(236,72,153,0.2); color: #f472b6; border: 1px solid rgba(236,72,153,0.3);">⚡ Ton tour</div>
-            <button v-if="isMyTurn && selectedCards.length > 0"
+            <!-- Use canPlay computed — never flashes from spam clicks -->
+            <button v-if="canPlay"
               @click="playSelected"
               class="px-6 py-2.5 rounded-xl font-black text-sm uppercase tracking-wide transition-all hover:scale-105"
               style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; cursor: pointer; box-shadow: 0 6px 20px rgba(139,92,246,0.4);">
@@ -378,12 +569,22 @@ onBeforeUnmount(() => {
               Passer
             </button>
           </div>
+
+          <!-- Spectator message in PLAY phase -->
+          <div v-if="phase === 'PLAY' && amISpectator"
+            class="px-6 py-3 rounded-2xl text-center"
+            style="background: rgba(255,255,255,0.04); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08);">
+            <div class="text-sm font-medium" style="color: #64748b;">👁️ Vous observez la partie en tant que spectateur</div>
+          </div>
         </div>
 
-        <!-- My hand -->
-        <div class="px-4 pb-4 pt-4" style="flex-shrink: 0; background: linear-gradient(0deg, rgba(0,0,0,0.4) 0%, transparent 100%);">
+        <!-- My hand (hidden for spectators) -->
+        <div v-if="!amISpectator" class="px-4 pb-4 pt-4" style="flex-shrink: 0; background: linear-gradient(0deg, rgba(0,0,0,0.4) 0%, transparent 100%);">
           <div class="text-center text-xs mb-2 uppercase tracking-widest font-semibold" style="color: #94a3b8;">
             <span v-if="!phase || phase === 'LOBBY'">En attente du lancement...</span>
+            <span v-else-if="isExchangePhase && myExchangeRequest && !gameStore.exchangeSubmitted" style="color: #fbbf24; text-shadow: 0 0 10px rgba(251,191,36,0.4);">Choisissez vos cartes à échanger</span>
+            <span v-else-if="isExchangePhase && myExchangeRequest && gameStore.exchangeSubmitted" style="color: #6ee7b7;">En attente de confirmation...</span>
+            <span v-else-if="isExchangePhase">En attente des échanges...</span>
             <span v-else-if="isMyTurn" style="color: #f472b6; text-shadow: 0 0 10px rgba(244,114,182,0.4);">À toi de jouer</span>
             <span v-else>Tour de l'adversaire...</span>
           </div>
@@ -392,24 +593,26 @@ onBeforeUnmount(() => {
             <div v-for="(card, idx) in myHand" :key="`${card.suit}-${card.rank}-${idx}`"
               :data-rank="card.rank"
               :data-suit="card.suit"
-              @click="toggleCard(card)"
+              @click="isExchangePhase && myExchangeRequest && !gameStore.exchangeSubmitted ? toggleExchangeCard(card) : toggleCard(card)"
               class="rounded-lg flex flex-col items-center justify-center flex-shrink-0 transition-all duration-150"
               :class="{ 
-                 'cursor-pointer': isMyTurn && isPlayable(card),
-                 'unplayable': (!isPlayable(card) && !isSelected(card))
+                 'cursor-pointer': (isExchangePhase && myExchangeRequest && !gameStore.exchangeSubmitted) || (isMyTurn && isPlayable(card)),
+                 'unplayable': !isExchangePhase && (!isPlayable(card) && !isSelected(card))
               }"
               :style="{
                 width: '46px',
                 height: '66px',
-                background: isSelected(card) ? '#f0f0ff' : '#fefefe',
-                border: isSelected(card) ? '2px solid #6366f1' : '1px solid #d1d5db',
+                background: (isExchangePhase && isExchangeSelected(card)) ? '#fff7ed' : isSelected(card) ? '#f0f0ff' : '#fefefe',
+                border: (isExchangePhase && isExchangeSelected(card)) ? '2px solid #f59e0b' : isSelected(card) ? '2px solid #6366f1' : '1px solid #d1d5db',
                 marginLeft: idx === 0 ? '0' : (myHand.length > 7 ? '-8px' : '3px'),
                 position: 'relative',
-                zIndex: isSelected(card) ? 50 : idx,
-                transform: isSelected(card) ? 'translateY(-10px)' : 'translateY(0)',
-                boxShadow: isSelected(card) ? '0 4px 12px rgba(99,102,241,0.4)' : '0 1px 4px rgba(0,0,0,0.12)',
-                opacity: (!isPlayable(card)) && !isSelected(card) ? '0.25' : '1',
-                filter: (!isPlayable(card)) && !isSelected(card) ? 'grayscale(80%)' : 'none',
+                zIndex: (isExchangePhase && isExchangeSelected(card)) || isSelected(card) ? 50 : idx,
+                transform: (isExchangePhase && isExchangeSelected(card)) || isSelected(card) ? 'translateY(-10px)' : 'translateY(0)',
+                boxShadow: (isExchangePhase && isExchangeSelected(card)) ? '0 4px 12px rgba(245,158,11,0.4)' : isSelected(card) ? '0 4px 12px rgba(99,102,241,0.4)' : '0 1px 4px rgba(0,0,0,0.12)',
+                opacity: (!isExchangePhase && !isPlayable(card)) && !isSelected(card) ? '0.25' : '1',
+                filter: (!isExchangePhase && !isPlayable(card)) && !isSelected(card) ? 'grayscale(80%)' : 'none',
+                cursor: (isExchangePhase && myExchangeRequest && !gameStore.exchangeSubmitted) ? 'pointer' : undefined,
+                pointerEvents: (!isExchangePhase && !isPlayable(card) && !isSelected(card)) ? 'none' : 'auto',
               }">
               <span class="font-bold text-xs leading-none" :style="{ color: isRed(card.suit) ? '#dc2626' : '#1e293b' }">{{ card.rank }}</span>
               <span class="text-base leading-none" :style="{ color: isRed(card.suit) ? '#dc2626' : '#1e293b' }">{{ getSuitSymbol(card.suit) }}</span>
@@ -418,6 +621,13 @@ onBeforeUnmount(() => {
               class="text-sm py-4" style="color: #475569;">
               Tu n'as plus de cartes 🎉
             </div>
+          </div>
+        </div>
+
+        <!-- Spectator hand zone placeholder -->
+        <div v-else class="px-4 pb-4 pt-2" style="flex-shrink: 0;">
+          <div class="text-center text-xs uppercase tracking-widest font-semibold py-3" style="color: #334155;">
+            👁️ Spectateur — vous rejoindrez à la prochaine manche
           </div>
         </div>
       </div>
@@ -455,7 +665,6 @@ onBeforeUnmount(() => {
                 </span>
               </div>
             </div>
-            <!-- Fake MMR variance for now based strictly on role -->
             <div class="font-mono text-sm font-bold" :class="getMmrColorClass(player.role || 'NEUTRE')">
               {{ getMmrText(player.role || 'NEUTRE') }}
             </div>
@@ -517,10 +726,7 @@ onBeforeUnmount(() => {
             <span>Suites autorisées:</span>
             <span class="font-semibold text-white">{{ gameStore.gameConfig?.enableSequences ? '✅ Oui' : '❌ Non' }}</span>
           </div>
-          <div class="flex justify-between pb-2 border-b border-white/10">
-            <span>Le 2 brûle le pli:</span>
-            <span class="font-semibold text-white">{{ gameStore.gameConfig?.enableSpecialTwo ? '✅ Oui' : '❌ Non' }}</span>
-          </div>
+
           <div class="flex justify-between pb-2 border-b border-white/10">
             <span>Révolution (Carré):</span>
             <span class="font-semibold text-white">{{ gameStore.gameConfig?.enableRevolution ? '✅ Oui' : '❌ Non' }}</span>
@@ -545,44 +751,105 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* "Ou rien" transition – slide in from top with bounce, max 1s */
+/* ── Cinematic Game Event Overlay ───────────────────────────────────────── */
+.game-event-enter-active {
+  animation: gameEventIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.game-event-leave-active {
+  animation: gameEventOut 0.5s ease-in forwards;
+}
+
+@keyframes gameEventIn {
+  0% { opacity: 0; transform: scale(0.5); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes gameEventOut {
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+
+.game-event-icon {
+  font-size: 3.5rem;
+  line-height: 1;
+  animation: iconBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+@keyframes iconBounce {
+  0% { transform: scale(0) rotate(-20deg); }
+  70% { transform: scale(1.2) rotate(5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* ── Toast notifications — bottom right ────────────────────────────────── */
+.toast-enter-active {
+  animation: toastIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.toast-leave-active {
+  animation: toastOut 0.35s ease-in forwards;
+}
+.toast-move {
+  transition: transform 0.3s ease;
+}
+
+@keyframes toastIn {
+  0% { opacity: 0; transform: translateX(60px) scale(0.9); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes toastOut {
+  0% { opacity: 1; transform: translateX(0) scale(1); }
+  100% { opacity: 0; transform: translateX(80px) scale(0.9); }
+}
+
+/* ── "Ou rien" transition ────────────────────────────────────────────────── */
 .ourien-enter-active {
   animation: ourien-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 .ourien-leave-active {
   animation: ourien-out 0.3s ease-in forwards;
 }
-
 @keyframes ourien-in {
-  0% {
-    opacity: 0;
-    transform: translateY(-20px) scale(0.8);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  0% { opacity: 0; transform: translateY(-20px) scale(0.8); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 @keyframes ourien-out {
-  0% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-10px) scale(0.9);
-  }
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-10px) scale(0.9); }
 }
 
 .fade-down-enter-active,
 .fade-down-leave-active {
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
 .fade-down-enter-from,
 .fade-down-leave-to {
   opacity: 0;
   transform: translate(-50%, -20px);
+}
+
+/* ── Cards on table ─────────────────────────────────────────────────────── */
+.trick-card-item {
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.trick-card-enter-active {
+  animation: cardFlyIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.trick-card-leave-active {
+  position: absolute;
+  opacity: 0;
+  transform: translateY(-20px) scale(0.8);
+  transition: all 0.2s ease-in;
+}
+@keyframes cardFlyIn {
+  0% { opacity: 0; transform: translateY(100px) scale(0.5) rotate(-20deg); }
+  50% { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0) scale(1) rotate(0deg); }
+}
+
+/* ── Pulsating "ou rien" badge ──────────────────────────────────────────── */
+.ourien-badge {
+  animation: pulseGlow 1.8s infinite alternate ease-in-out;
+}
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 15px rgba(239,68,68,0.2), inset 0 0 10px rgba(239,68,68,0.1); transform: scale(1); }
+  100% { box-shadow: 0 0 35px rgba(239,68,68,0.7), inset 0 0 20px rgba(239,68,68,0.3); transform: scale(1.05); }
 }
 </style>

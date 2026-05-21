@@ -23,9 +23,12 @@ const gameStore = useGameStore()
         <span class="font-bold text-lg" style="color: #f1f5f9;">Président</span>
       </div>
       <div class="flex items-center gap-4">
-        <span class="text-sm font-medium" style="color: #94a3b8;">
+        <router-link to="/leaderboard" class="text-sm font-semibold transition-all hover:opacity-80" style="color: #fbbf24; text-decoration: none;">
+          🏆 Classement
+        </router-link>
+        <router-link to="/profile" class="text-sm font-medium transition-all hover:opacity-80 flex items-center gap-1" style="color: #94a3b8; text-decoration: none;">
           👤 {{ authStore.user?.username }}
-        </span>
+        </router-link>
         <button
           @click="authStore.logout"
           class="text-sm px-4 py-2 rounded-lg transition-all"

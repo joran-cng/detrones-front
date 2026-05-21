@@ -34,10 +34,21 @@ export const useGameStore = defineStore('game', () => {
     const gameCurrentTrickType = ref<string>('')
     const gameActiveConsecutiveCards = ref<number>(0)
 
+    // Exchange phase
+    const gamePendingExchanges = ref<any[]>([])
+    const gameExchangeRequest = ref<{ count: number; received: any[] } | null>(null)
+    const exchangeSubmitted = ref(false) // guard: prevent double-submit
+    const cardPlayedAnimation = ref<{ sessionId: string; username: string; cards: any[]; timestamp: number } | null>(null)
+
+    // Game events for cinematic overlay
+    const gameEvent = ref<{ type: string; text: string; icon: string } | null>(null)
+
+
     const currentRoomId = ref<string | null>(null)
     const lobbyRooms = ref<any[]>([])
     const chatMessages = ref<any[]>([])
     const gameErrorMessage = ref<string>('')
+    const systemNotifications = ref<any[]>([])
     const isHost = ref(false)
     const authStore = useAuthStore()
 
@@ -153,6 +164,31 @@ export const useGameStore = defineStore('game', () => {
             gameActiveConsecutiveCards.value = data.activeConsecutiveCards || 0
             if (data.config) gameConfig.value = data.config
             if (data.code) currentRoomId.value = data.code
+            gamePendingExchanges.value = data.pendingExchanges || []
+
+            // Fix exchange sync: clear gameExchangeRequest when server removes us from pendingExchanges
+            const mySessionId = r.sessionId
+            const stillPending = (data.pendingExchanges || []).some((ex: any) => ex.sessionId === mySessionId)
+            if (!stillPending && gameExchangeRequest.value !== null) {
+                gameExchangeRequest.value = null
+                exchangeSubmitted.value = false
+            }
+        })
+
+        r.onMessage('exchange_request', (data: { count: number; received: any[] }) => {
+            console.log('[exchange_request]', data)
+            gameExchangeRequest.value = data
+            exchangeSubmitted.value = false
+        })
+
+        r.onMessage('card_played', (data: { sessionId: string; username: string; cards: any[]; timestamp: number }) => {
+            cardPlayedAnimation.value = data
+            // Auto-clear after animation duration
+            setTimeout(() => {
+                if (cardPlayedAnimation.value?.timestamp === data.timestamp) {
+                    cardPlayedAnimation.value = null
+                }
+            }, 1200)
         })
 
         r.onMessage('my_hand', (hand: any[]) => {
@@ -171,7 +207,44 @@ export const useGameStore = defineStore('game', () => {
         })
 
         r.onMessage('chat_message', (message) => {
-            chatMessages.value = [...chatMessages.value, message]
+            const text: string = message.text || ''
+            
+            if (message.sender === "🎮 Système" || message.sender === "👑 Président") {
+                const isJoinLeave = text.includes('rejoint') || text.includes('quitté') || text.includes('revenu') || text.includes('déconnecté')
+                if (isJoinLeave) {
+                    const id = Date.now() + Math.random().toString(36).substring(2, 9);
+                    systemNotifications.value = [...systemNotifications.value, { id, ...message }];
+                    setTimeout(() => {
+                        systemNotifications.value = systemNotifications.value.filter((n: any) => n.id !== id);
+                    }, 4500);
+                }
+            } else {
+                chatMessages.value = [...chatMessages.value, message]
+            }
+
+            // Detect special game events for cinematic overlay
+            let event: { type: string; text: string; icon: string } | null = null
+
+            if (text.includes('carré') || text.includes('Carré')) {
+                event = { type: 'quad', text: 'CARRÉ !', icon: '🔥' }
+            } else if (text.includes('RÉVOLUTION') || text.includes('CONTRE-RÉVOLUTION')) {
+                const isCounter = text.includes('CONTRE')
+                event = { type: 'revolution', text: isCounter ? 'CONTRE-RÉVOLUTION !' : 'RÉVOLUTION !', icon: '🌪️' }
+            } else if (text.includes('Président') && text.includes('premier')) {
+                event = { type: 'president', text: 'PRÉSIDENT !', icon: '👑' }
+            } else if (text.includes('Trou du Cul') || text.includes('TDC')) {
+                event = { type: 'tdc', text: 'TROU DU CUL !', icon: '💩' }
+            }
+
+            if (event) {
+                const ev = event
+                setTimeout(() => {
+                    gameEvent.value = ev
+                    setTimeout(() => {
+                        gameEvent.value = null
+                    }, 2200)
+                }, 600)
+            }
         })
 
         r.onLeave((code) => {
@@ -198,8 +271,14 @@ export const useGameStore = defineStore('game', () => {
         gameActiveConsecutiveCards.value = 0
         gameConfig.value = null
         chatMessages.value = []
+        systemNotifications.value = []
         isHost.value = false
         currentRoomId.value = null
+        gamePendingExchanges.value = []
+        gameExchangeRequest.value = null
+        exchangeSubmitted.value = false
+        cardPlayedAnimation.value = null
+        gameEvent.value = null
     }
 
     // ─── Actions ─────────────────────────────────────────────────────────────
@@ -208,6 +287,7 @@ export const useGameStore = defineStore('game', () => {
             const code = generateCode()
             const r = await client.create('match', {
                 username: authStore.user?.username,
+                avatarUrl: authStore.user?.avatarUrl,
                 code,
                 config,
             })
@@ -239,6 +319,7 @@ export const useGameStore = defineStore('game', () => {
 
             const r = await client.joinById(realRoomId, {
                 username: authStore.user?.username,
+                avatarUrl: authStore.user?.avatarUrl,
             })
             currentRoomId.value = input
             isHost.value = false
@@ -264,9 +345,10 @@ export const useGameStore = defineStore('game', () => {
     }
 
     return {
-        client, room, currentRoomId, isHost, lobbyRooms, chatMessages, gameErrorMessage,
+        client, room, currentRoomId, isHost, lobbyRooms, chatMessages, gameErrorMessage, systemNotifications,
         gamePhase, gamePlayers, gameCurrentTurnPlayerId, gameCurrentTrick, gameMyHand,
         gameReversed, gameIsForcedRank, gameConfig, gameCurrentTrickType, gameActiveConsecutiveCards,
+        gamePendingExchanges, gameExchangeRequest, exchangeSubmitted, cardPlayedAnimation, gameEvent,
         joinLobby, fetchRooms, createGame, joinGame, leaveGame, sendChat,
     }
 })

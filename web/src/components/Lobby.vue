@@ -10,7 +10,6 @@ const configOptions = reactive({
   minPlayers: 3,
   maxPlayers: 7,
   enableSequences: false,
-  enableSpecialTwo: false,
   enableRevolution: true,
   revolutionResetsTrick: true,
   exchangeCards: true,
@@ -80,14 +79,6 @@ onMounted(async () => {
             <div>
               <div class="text-sm font-medium" style="color: #cbd5e1;">Suites autorisées</div>
               <div class="text-xs" style="color: #64748b;">Permet de jouer des suites (ex: 3,4,5)</div>
-            </div>
-          </label>
-
-          <label class="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" v-model="configOptions.enableSpecialTwo" class="w-4 h-4 rounded" style="accent-color: #7c3aed;">
-            <div>
-              <div class="text-sm font-medium" style="color: #cbd5e1;">Le 2 brûle le pli</div>
-              <div class="text-xs" style="color: #64748b;">Jouer un 2 ramasse le pli immédiatement</div>
             </div>
           </label>
 

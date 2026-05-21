@@ -7,7 +7,20 @@ const gameStore = useGameStore()
 
 // ── All data comes from reactive store refs — no more reading room.state ───
 const mySessionId = computed(() => gameStore.room?.sessionId ?? '')
-const players = computed(() => gameStore.gamePlayers)
+const players = computed(() => {
+  const roleOrder: Record<string, number> = {
+    PRESIDENT: 1,
+    VICE_PRESIDENT: 2,
+    NEUTRE: 3,
+    VICE_TDC: 4,
+    TDC: 5
+  }
+  return [...gameStore.gamePlayers].sort((a, b) => {
+    const valA = roleOrder[a.role] || 99
+    const valB = roleOrder[b.role] || 99
+    return valA - valB
+  })
+})
 const me = computed(() => players.value.find(p => p.isMe))
 const myHand = computed(() => gameStore.gameMyHand)
 const currentTrick = computed(() => gameStore.gameCurrentTrick)

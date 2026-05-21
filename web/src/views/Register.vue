@@ -8,10 +8,12 @@ const authStore = useAuthStore()
 const formValue = ref({ email: '', username: '', password: '' })
 const loading = ref(false)
 const error = ref('')
+const usernameSuggestion = ref('')
 
 async function handleRegister() {
   loading.value = true
   error.value = ''
+  usernameSuggestion.value = ''
   try {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
@@ -19,7 +21,21 @@ async function handleRegister() {
       body: JSON.stringify(formValue.value)
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.statusMessage || 'Registration failed')
+    if (!res.ok) {
+      // Check for username suggestion
+      if (res.status === 409 && data.data?.suggestion) {
+        usernameSuggestion.value = data.data.suggestion
+        error.value = `Le pseudo "${formValue.value.username}" est déjà pris.`
+      } else {
+        const msg = data.statusMessage || ''
+        if (msg === 'Email already in use') {
+          error.value = 'Cette adresse email est déjà utilisée.'
+        } else {
+          error.value = msg || 'Erreur lors de la création du compte.'
+        }
+      }
+      return
+    }
     authStore.setAuth(data.token, data.user)
     router.push('/')
   } catch (e: any) {
@@ -27,6 +43,12 @@ async function handleRegister() {
   } finally {
     loading.value = false
   }
+}
+
+function useSuggestion() {
+  formValue.value.username = usernameSuggestion.value
+  usernameSuggestion.value = ''
+  error.value = ''
 }
 </script>
 
@@ -71,8 +93,24 @@ async function handleRegister() {
             />
           </div>
 
+          <!-- Error message -->
           <div v-if="error" class="text-sm p-3 rounded-lg" style="background: rgba(239,68,68,0.1); color: #f87171; border: 1px solid rgba(239,68,68,0.2);">
             {{ error }}
+          </div>
+
+          <!-- Username suggestion -->
+          <div v-if="usernameSuggestion"
+            class="flex items-center justify-between p-3 rounded-lg"
+            style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.3);">
+            <span class="text-sm" style="color: #c4b5fd;">
+              💡 Essayez : <strong>{{ usernameSuggestion }}</strong>
+            </span>
+            <button
+              @click="useSuggestion"
+              class="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all hover:scale-105"
+              style="background: rgba(139,92,246,0.3); color: #e9d5ff; cursor: pointer; border: 1px solid rgba(139,92,246,0.5);">
+              Utiliser
+            </button>
           </div>
 
           <button @click="handleRegister" :disabled="loading"
