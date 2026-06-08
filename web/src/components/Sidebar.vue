@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import Button from './Button.vue'
@@ -20,6 +20,37 @@ function handleLogout() {
 const isLobbyActive = computed(() => currentPath.value === '/')
 const isLeaderboardActive = computed(() => currentPath.value === '/leaderboard')
 const isProfileActive = computed(() => currentPath.value.startsWith('/profile'))
+const isFriendsActive = computed(() => currentPath.value === '/friends')
+const isConversationsActive = computed(() => currentPath.value.startsWith('/conversations'))
+
+// Notification badge
+const pendingRequests = ref(0)
+const unreadMessages = ref(0)
+
+let notifInterval: ReturnType<typeof setInterval> | null = null
+
+async function fetchNotifications() {
+  if (!authStore.token) return
+  try {
+    const res = await fetch('/api/chat/notifications', {
+      headers: { 'Authorization': `Bearer ${authStore.token}` }
+    })
+    if (res.ok) {
+      const data = await res.json()
+      pendingRequests.value = data.pendingRequests
+      unreadMessages.value = data.unreadMessages
+    }
+  } catch {}
+}
+
+onMounted(() => {
+  fetchNotifications()
+  notifInterval = setInterval(fetchNotifications, 30000)
+})
+
+onUnmounted(() => {
+  if (notifInterval) clearInterval(notifInterval)
+})
 </script>
 
 <template>
@@ -106,6 +137,52 @@ const isProfileActive = computed(() => currentPath.value.startsWith('/profile'))
         >
           Classement
         </Button>
+
+        <!-- Amis -->
+        <div class="relative">
+          <Button
+            :variant="isFriendsActive ? 'primary' : 'ghost'"
+            :shade="isFriendsActive ? 'dark' : 'default'"
+            :icon="Icons.Users"
+            full-width
+            size="md"
+            class="!justify-start"
+            @click="router.push('/friends')"
+          >
+            Amis
+          </Button>
+          <!-- Notification badge for requests -->
+          <div
+            v-if="pendingRequests > 0"
+            class="absolute top-1 right-1 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-black pointer-events-none"
+            style="background: #fbbf24; color: #0f0c00;"
+          >
+            {{ pendingRequests > 9 ? '9+' : pendingRequests }}
+          </div>
+        </div>
+
+        <!-- Conversations -->
+        <div class="relative">
+          <Button
+            :variant="isConversationsActive ? 'primary' : 'ghost'"
+            :shade="isConversationsActive ? 'dark' : 'default'"
+            :icon="Icons.MessageSquare"
+            full-width
+            size="md"
+            class="!justify-start"
+            @click="router.push('/conversations')"
+          >
+            Conversations
+          </Button>
+          <!-- Notification badge for unread messages -->
+          <div
+            v-if="unreadMessages > 0"
+            class="absolute top-1 right-1 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-black pointer-events-none"
+            style="background: #fbbf24; color: #0f0c00;"
+          >
+            {{ unreadMessages > 9 ? '9+' : unreadMessages }}
+          </div>
+        </div>
 
         <!-- Mon Profil -->
         <Button

@@ -20,7 +20,9 @@ import {
   Star,
   Sparkles,
   Leaf,
-  Gamepad2
+  Gamepad2,
+  Clock,
+  MessageSquare,
 } from '@lucide/vue'
 
 const route = useRoute()
@@ -31,6 +33,10 @@ const profileUser = ref<any>(null)
 const loading = ref(true)
 const friends = ref<any[]>([])
 const myFriendsIds = ref<string[]>([])
+// Relationship state with the viewed profile
+// null = no relation, 'PENDING_SENT' = I sent a request, 'PENDING_RECEIVED' = they sent me one, 'ACCEPTED' = friends
+const relationshipStatus = ref<null | 'PENDING_SENT' | 'PENDING_RECEIVED' | 'ACCEPTED'>(null)
+const relationshipRequestId = ref<string | null>(null)
 
 // ── Edit state ─────────────────────────────────────────────────────────────
 const showEditPanel = ref(false)
@@ -218,20 +224,94 @@ async function fetchProfile() {
 async function fetchFriends() {
   if (!authStore.token) return
   try {
-    const res = await fetch('/api/friends', { headers: { 'Authorization': `Bearer ${authStore.token}` } })
-    if (res.ok) {
-      const data = await res.json()
+    const headers = { 'Authorization': `Bearer ${authStore.token}` }
+    const [friendsRes, receivedRes, sentRes] = await Promise.all([
+      fetch('/api/friends', { headers }),
+      fetch('/api/friends/requests', { headers }),
+      fetch('/api/friends/sent', { headers }),
+    ])
+
+    if (friendsRes.ok) {
+      const data = await friendsRes.json()
       if (isMyProfile.value) friends.value = data
       myFriendsIds.value = data.map((f: any) => f.id)
+    }
+
+    // Determine relationship status with viewed profile
+    if (!isMyProfile.value && targetUserId.value) {
+      relationshipStatus.value = null
+      relationshipRequestId.value = null
+
+      // Check if accepted friend
+      if (myFriendsIds.value.includes(targetUserId.value)) {
+        relationshipStatus.value = 'ACCEPTED'
+        return
+      }
+
+      // Check sent requests
+      if (sentRes.ok) {
+        const sent = await sentRes.json()
+        const sentToThis = sent.find((r: any) => r.to.id === targetUserId.value)
+        if (sentToThis) {
+          relationshipStatus.value = 'PENDING_SENT'
+          relationshipRequestId.value = sentToThis.requestId
+          return
+        }
+      }
+
+      // Check received requests
+      if (receivedRes.ok) {
+        const received = await receivedRes.json()
+        const fromThis = received.find((r: any) => r.from.id === targetUserId.value)
+        if (fromThis) {
+          relationshipStatus.value = 'PENDING_RECEIVED'
+          relationshipRequestId.value = fromThis.requestId
+        }
+      }
     }
   } catch (e) {}
 }
 
-async function toggleFriend() {
+async function sendFriendRequest() {
   if (!authStore.token || !targetUserId.value) return
-  const endpoint = isFriend.value ? '/api/friends/remove' : '/api/friends/add'
   try {
-    const res = await fetch(endpoint, {
+    const res = await fetch('/api/friends/add', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${authStore.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ friendId: targetUserId.value })
+    })
+    if (res.ok) await fetchFriends()
+  } catch (e) {}
+}
+
+async function acceptRequest() {
+  if (!authStore.token || !relationshipRequestId.value) return
+  try {
+    const res = await fetch('/api/friends/accept', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${authStore.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestId: relationshipRequestId.value })
+    })
+    if (res.ok) await fetchFriends()
+  } catch (e) {}
+}
+
+async function cancelOrDeclineRequest() {
+  if (!authStore.token || !relationshipRequestId.value) return
+  try {
+    const res = await fetch('/api/friends/decline', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${authStore.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requestId: relationshipRequestId.value })
+    })
+    if (res.ok) await fetchFriends()
+  } catch (e) {}
+}
+
+async function removeFriend() {
+  if (!authStore.token || !targetUserId.value) return
+  try {
+    const res = await fetch('/api/friends/remove', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${authStore.token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ friendId: targetUserId.value })
@@ -316,14 +396,36 @@ function getMmrRank(mmr: number) {
               >
                 Modifier le profil
               </Button>
-              
-              <Button v-if="!isMyProfile" @click="toggleFriend"
-                :variant="isFriend ? 'danger' : 'secondary'"
+
+              <!-- No relation: send request -->
+              <Button v-if="!isMyProfile && relationshipStatus === null" @click="sendFriendRequest"
+                variant="secondary"
                 size="sm"
-                :icon="isFriend ? UserMinus : UserPlus"
+                :icon="UserPlus"
               >
-                {{ isFriend ? 'Retirer' : 'Ajouter' }}
+                Ajouter en ami
               </Button>
+
+              <!-- I sent a pending request -->
+              <Button v-if="!isMyProfile && relationshipStatus === 'PENDING_SENT'" @click="cancelOrDeclineRequest"
+                variant="ghost"
+                size="sm"
+                :icon="Clock"
+              >
+                Demande envoyée
+              </Button>
+
+              <!-- They sent me a request: accept or decline -->
+              <template v-if="!isMyProfile && relationshipStatus === 'PENDING_RECEIVED'">
+                <Button @click="acceptRequest" variant="primary" size="sm" :icon="Check">Accepter</Button>
+                <Button @click="cancelOrDeclineRequest" variant="danger" size="sm" :icon="X">Refuser</Button>
+              </template>
+
+              <!-- Already friends: chat + remove -->
+              <template v-if="!isMyProfile && relationshipStatus === 'ACCEPTED'">
+                <Button @click="router.push(`/conversations/${targetUserId}`)" variant="secondary" size="sm" :icon="MessageSquare">Tchater</Button>
+                <Button @click="removeFriend" variant="danger" size="sm" :icon="UserMinus">Retirer</Button>
+              </template>
             </div>
           </div>
 

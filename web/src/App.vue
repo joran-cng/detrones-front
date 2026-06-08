@@ -29,10 +29,9 @@ const themeOverrides = {
     <NGlobalStyle />
     <NMessageProvider>
       <!-- Auth App Layout with Sidebar -->
-      <div v-if="showSidebar" class="flex min-h-screen bg-background-1 text-white">
+      <div v-if="showSidebar" class="flex h-screen bg-background-1 text-white overflow-hidden">
         <Sidebar />
-        <main class="flex-1 ml-64 min-h-screen relative overflow-x-hidden">
-
+        <main class="flex-1 ml-64 h-full relative overflow-y-auto overflow-x-hidden" id="main-content">
           <router-view class="relative z-10" />
         </main>
       </div>
