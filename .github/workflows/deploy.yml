@@ -22,8 +22,6 @@ jobs:
       # 2. Configuration de PNPM
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       # 3. Configuration de Node.js
       - name: Setup Node.js
