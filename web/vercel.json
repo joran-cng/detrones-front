@@ -16,6 +16,10 @@
     {
       "source": "/roomByCode/:path*",
       "destination": "https://president-game-server.onrender.com/roomByCode/:path*"
+    },
+    {
+      "source": "/((?!api|colyseus|rooms|roomByCode|assets|favicon.ico).*)",
+      "destination": "/index.html"
     }
   ]
 }
