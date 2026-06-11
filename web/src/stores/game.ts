@@ -13,9 +13,17 @@ function generateCode(): string {
 const SESSION_KEY = 'game_session'
 
 export const useGameStore = defineStore('game', () => {
+    const isProd = import.meta.env.PROD || window.location.hostname !== 'localhost'
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const gameServerUrl = `${protocol}//${window.location.host}/colyseus`
-    const gameApiBase = ''
+    
+    const gameServerUrl = isProd
+        ? 'wss://president-game-server.onrender.com'
+        : `${protocol}//${window.location.host}/colyseus`
+        
+    const gameApiBase = isProd
+        ? 'https://president-game-server.onrender.com'
+        : ''
+        
     const client = new Colyseus.Client(gameServerUrl)
 
     const room = shallowRef<Colyseus.Room | null>(null)
