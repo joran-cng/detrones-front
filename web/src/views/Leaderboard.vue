@@ -75,7 +75,7 @@ onMounted(() => {
         <!-- Hero Image Right -->
         <div class="relative z-10 w-full md:w-[45%] h-44 flex items-center justify-end">
           <img 
-            src="/images/leaderboard_hero.png" 
+            src="/leaderboard_hero.png" 
             alt="Président Classement" 
             class="w-full h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]" 
           />
