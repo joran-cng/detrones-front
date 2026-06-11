@@ -1,70 +1,35 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import {
-  Globe,
-  Users,
-  Clock,
-  Trophy,
-  Loader2,
-  Sword,
-  Crown,
-  Star,
-  Zap,
-  Shield,
-  Award
+import { 
+  Trophy, 
+  Globe, 
+  Users, 
+  Clock, 
+  Crown, 
+  Award, 
+  Gift, 
+  Loader2 
 } from '@lucide/vue'
+import Button from '../components/Button.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-type FilterType = 'global' | 'friends'
-const activeFilter = ref<FilterType>('global')
 const leaderboard = ref<any[]>([])
 const loading = ref(true)
+const activeFilter = ref<'global' | 'friends'>('global')
 
-// Timer for season countdown
-const timeLeft = ref({ days: 22, hours: 4, minutes: 37 })
-let timerInterval: ReturnType<typeof setInterval> | null = null
-
-function startTimer() {
-  // Set a fixed end date: Saison X ends in ~22 days from a reference point
-  // For display purposes, count down from a fixed future date
-  const endDate = new Date()
-  endDate.setDate(endDate.getDate() + 22)
-  endDate.setHours(endDate.getHours() + 4)
-  endDate.setMinutes(endDate.getMinutes() + 37)
-
-  const target = endDate.getTime()
-
-  timerInterval = setInterval(() => {
-    const now = Date.now()
-    const diff = target - now
-    if (diff <= 0) {
-      timeLeft.value = { days: 0, hours: 0, minutes: 0 }
-      if (timerInterval) clearInterval(timerInterval)
-      return
-    }
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-    timeLeft.value = { days, hours, minutes }
-  }, 1000)
-}
-
-async function fetchLeaderboard() {
+async function loadLeaderboard(filter: 'global' | 'friends' = 'global') {
+  activeFilter.value = filter
   loading.value = true
   try {
     const headers: Record<string, string> = {}
-    let url = '/api/leaderboard'
-
-    if (activeFilter.value === 'friends' && authStore.token) {
-      url += '?filter=friends'
+    if (authStore.token) {
       headers['Authorization'] = `Bearer ${authStore.token}`
     }
-
-    const res = await fetch(url, { headers })
+    const res = await fetch(`/api/leaderboard?filter=${filter}`, { headers })
     if (res.ok) {
       leaderboard.value = await res.json()
     }
@@ -75,324 +40,285 @@ async function fetchLeaderboard() {
   }
 }
 
-function setFilter(filter: FilterType) {
-  activeFilter.value = filter
-  fetchLeaderboard()
-}
-
-function getInitials(username: string) {
-  return (username || '?').slice(0, 2).toUpperCase()
-}
-
-function getAvatarUrl(url: string) {
-  if (!url) return ''
-  return url.startsWith('http') ? url : `http://localhost:3000${url}`
-}
-
-// Rank badge images
-function getRankImage(index: number) {
-  if (index === 0) return '/rank1.png'
-  if (index === 1) return '/rank2.png'
-  if (index === 2) return '/rank3.png'
-  return ''
-}
-
-// Top 3 styling
-function getRankBorderColor(index: number) {
-  if (index === 0) return 'rgba(251, 191, 36, 0.5)'
-  if (index === 1) return 'rgba(148, 163, 184, 0.4)'
-  if (index === 2) return 'rgba(180, 83, 9, 0.4)'
-  return 'rgba(255,255,255,0.06)'
-}
-
-function getRankBg(index: number) {
-  if (index === 0) return 'linear-gradient(135deg, rgba(251,191,36,0.12) 0%, rgba(251,191,36,0.04) 100%)'
-  if (index === 1) return 'linear-gradient(135deg, rgba(148,163,184,0.10) 0%, rgba(148,163,184,0.03) 100%)'
-  if (index === 2) return 'linear-gradient(135deg, rgba(180,83,9,0.10) 0%, rgba(180,83,9,0.03) 100%)'
-  return 'rgba(255,255,255,0.02)'
-}
-
-function getMmrColor(index: number) {
-  if (index === 0) return '#fbbf24'
-  if (index === 1) return '#94a3b8'
-  if (index === 2) return '#b45309'
-  return '#9b7134'
-}
-
-const top3 = computed(() => leaderboard.value.slice(0, 3))
-const rest = computed(() => leaderboard.value.slice(3))
-
 onMounted(() => {
-  fetchLeaderboard()
-  startTimer()
-})
-
-onUnmounted(() => {
-  if (timerInterval) clearInterval(timerInterval)
+  loadLeaderboard('global')
 })
 </script>
 
 <template>
-  <div class="min-h-screen leaderboard-page" style="background: #070c15;">
-
-    <!-- ═══════════════════ HERO BANNER ═══════════════════ -->
-    <div class="hero-banner relative overflow-hidden" style="border-radius: 16px; margin: 20px 20px 0; min-height: 160px;">
-      <!-- Background image -->
-      <img
-        src="/leaderboard_hero.png"
-        alt="Leaderboard Hero"
-        class="absolute inset-0 w-full h-full object-cover"
-        style="object-position: center;"
-      />
-      <!-- Dark overlay -->
-      <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(7,12,21,0.92) 0%, rgba(7,12,21,0.75) 50%, rgba(7,12,21,0.3) 100%);"></div>
-      <!-- Content -->
-      <div class="relative z-10 flex flex-col justify-center px-8 py-7 h-full" style="min-height: 160px;">
-        <div class="flex items-center gap-2 mb-2">
-          <Trophy class="w-5 h-5" style="color: #fbbf24;" />
-          <span class="text-xs font-bold tracking-widest uppercase" style="color: #9b7134;">Les meilleurs joueurs s'affrontent pour devenir le Président.</span>
+  <div class="px-8 py-10 min-h-screen bg-background-1 text-slate-100">
+    <div class="max-w-6xl mx-auto">
+      
+      <!-- Premium Hero Header -->
+      <div class="relative overflow-hidden rounded-3xl border border-white/[0.06] bg-gradient-to-r from-[#0d121f] via-[#111726] to-[#070b14] p-8 md:p-12 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 min-h-[220px] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+        <!-- Background decorative ambient glow -->
+        <div class="absolute inset-0 pointer-events-none opacity-20">
+          <div class="absolute -top-12 -left-12 w-64 h-64 rounded-full bg-primary/20 blur-3xl"></div>
+          <div class="absolute bottom-0 right-1/4 w-80 h-80 rounded-full bg-primary-light/10 blur-3xl"></div>
         </div>
-        <h1 class="font-black tracking-widest uppercase" style="font-size: 2.2rem; color: #f1f5f9; font-family: 'Cinzel', serif; text-shadow: 0 2px 16px rgba(0,0,0,0.7);">CLASSEMENT</h1>
-      </div>
-    </div>
-
-    <!-- ═══════════════════ FILTERS + SEASON ═══════════════════ -->
-    <div class="flex items-center justify-between px-5 py-4" style="gap: 12px;">
-      <!-- Filter Buttons -->
-      <div class="flex gap-2">
-        <!-- Classement Global -->
-        <button
-          @click="setFilter('global')"
-          class="filter-btn flex items-center gap-2"
-          :class="activeFilter === 'global' ? 'filter-btn--active' : 'filter-btn--inactive'"
-        >
-          <Globe class="w-4 h-4" />
-          <span>Classement Global</span>
-        </button>
-
-        <!-- Amis -->
-        <button
-          @click="setFilter('friends')"
-          class="filter-btn flex items-center gap-2"
-          :class="activeFilter === 'friends' ? 'filter-btn--active' : 'filter-btn--inactive'"
-        >
-          <Users class="w-4 h-4" />
-          <span>Amis</span>
-        </button>
-      </div>
-
-      <!-- Season Info -->
-      <div class="season-badge flex items-center gap-3 px-4 py-2.5 rounded-xl" style="background: rgba(20,15,5,0.8); border: 1px solid rgba(155,113,52,0.3); backdrop-filter: blur(8px);">
-        <Clock class="w-4 h-4 flex-shrink-0" style="color: #fbbf24;" />
-        <div class="text-right">
-          <div class="text-xs font-black tracking-wider" style="color: #fbbf24;">Saison X</div>
-          <div class="text-xs" style="color: #94a3b8;">
-            Se termine dans {{ timeLeft.days }}j {{ timeLeft.hours }}h {{ String(timeLeft.minutes).padStart(2, '0') }}min
+        
+        <!-- Text content -->
+        <div class="relative z-10 flex-1">
+          <h1 class="text-4xl md:text-5xl font-black tracking-[0.15em] text-white uppercase font-cinzel select-none drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
+            Classement
+          </h1>
+          <div class="flex items-center gap-3 mt-4 text-slate-300">
+            <div class="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Trophy class="w-4.5 h-4.5 text-primary-light" />
+            </div>
+            <p class="text-sm md:text-base font-semibold leading-relaxed text-slate-300">
+              Les meilleurs joueurs s'affrontent pour devenir le Président.
+            </p>
           </div>
         </div>
+        
+        <!-- Hero Image Right -->
+        <div class="relative z-10 w-full md:w-[45%] h-44 flex items-center justify-end">
+          <img 
+            src="/images/leaderboard_banner.png" 
+            alt="Président Classement" 
+            class="w-full h-full object-contain filter drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]" 
+          />
+        </div>
       </div>
-    </div>
 
-    <!-- ═══════════════════ LEADERBOARD TABLE ═══════════════════ -->
-    <div class="px-5 pb-5">
-      <div class="leaderboard-table rounded-2xl overflow-hidden" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);">
-
-        <!-- Loading -->
-        <div v-if="loading" class="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
-          <Loader2 class="w-8 h-8 animate-spin" style="color: #9b7134;" />
-          <span class="text-xs font-bold uppercase tracking-widest" style="color: #64748b;">Chargement...</span>
-        </div>
-
-        <!-- Empty -->
-        <div v-else-if="leaderboard.length === 0" class="flex flex-col items-center justify-center py-16 gap-3">
-          <Trophy class="w-12 h-12 opacity-20" style="color: #9b7134;" />
-          <p class="text-sm" style="color: #64748b;">Aucun joueur dans ce classement.</p>
-        </div>
-
-        <template v-else>
-          <!-- Table Header -->
-          <div class="table-header grid items-center px-6 py-3" style="grid-template-columns: 80px 1fr 140px 160px; border-bottom: 1px solid rgba(255,255,255,0.06);">
-            <span class="text-xs font-bold uppercase tracking-widest" style="color: #4b5563;">RANG</span>
-            <span class="text-xs font-bold uppercase tracking-widest" style="color: #4b5563;">JOUEUR</span>
-            <span class="text-xs font-bold uppercase tracking-widest text-right" style="color: #4b5563;">MMR</span>
-            <span class="text-xs font-bold uppercase tracking-widest text-right pr-2" style="color: #4b5563;">PARTIES GAGNÉES</span>
-          </div>
-
-          <!-- Top 3 rows -->
-          <div
-            v-for="(user, index) in top3"
-            :key="user.id"
-            @click="router.push(`/profile/${user.id}`)"
-            class="leaderboard-row grid items-center px-6 py-3 cursor-pointer transition-all"
-            :style="{
-              gridTemplateColumns: '80px 1fr 140px 160px',
-              background: getRankBg(index),
-              borderBottom: '1px solid rgba(255,255,255,0.04)',
-            }"
+      <!-- Filters & Season Info Row -->
+      <div class="flex items-center justify-between flex-wrap gap-4 mb-6">
+        <!-- Filters Left -->
+        <div class="flex items-center gap-3 bg-[#0b0e14]/60 p-1.5 rounded-2xl border border-white/[0.04]">
+          <button
+            @click="loadLeaderboard('global')"
+            class="px-5 py-3 rounded-xl font-bold text-sm flex items-center gap-2.5 transition-all duration-300 cursor-pointer border"
+            :class="activeFilter === 'global'
+              ? 'bg-gradient-to-r from-primary to-primary-light border-primary-light/20 text-white shadow-lg shadow-primary/20'
+              : 'border-transparent bg-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.02]'"
           >
-            <!-- Rank badge -->
-            <div class="flex items-center justify-center w-12 h-12">
-              <img :src="getRankImage(index)" :alt="`Rang ${index + 1}`" class="w-12 h-12 object-contain" />
-            </div>
-
-            <!-- Player -->
-            <div class="flex items-center gap-3">
-              <!-- Avatar -->
-              <div
-                class="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-sm font-black border-2"
-                :style="{
-                  borderColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : '#b45309',
-                  background: user.avatarUrl ? 'transparent' : `linear-gradient(135deg, rgba(155,113,52,0.3), rgba(184,147,92,0.15))`
-                }"
-              >
-                <img v-if="user.avatarUrl" :src="getAvatarUrl(user.avatarUrl)" :alt="user.username" class="w-full h-full object-cover" @error="(e: any) => e.target.style.display='none'" />
-                <span v-else style="color: #b8935c;">{{ getInitials(user.username) }}</span>
-              </div>
-              <!-- Name + crown for #1 -->
-              <div class="flex flex-col">
-                <div class="flex items-center gap-1.5">
-                  <span class="font-bold text-sm" style="color: #f1f5f9;">{{ user.username }}</span>
-                  <Crown v-if="index === 0" class="w-4 h-4" style="color: #fbbf24;" />
-                </div>
-              </div>
-            </div>
-
-            <!-- MMR -->
-            <div class="text-right font-black text-lg font-mono" :style="{ color: getMmrColor(index) }">
-              {{ user.mmr }}
-            </div>
-
-            <!-- Wins -->
-            <div class="text-right pr-2 font-bold text-sm" style="color: #94a3b8;">
-              {{ user.winsCount ?? 0 }}
-            </div>
-          </div>
-
-          <!-- Rows 4+ -->
-          <div
-            v-for="(user, i) in rest"
-            :key="user.id"
-            @click="router.push(`/profile/${user.id}`)"
-            class="leaderboard-row grid items-center px-6 py-3.5 cursor-pointer transition-all"
-            :style="{
-              gridTemplateColumns: '80px 1fr 140px 160px',
-              borderBottom: i < rest.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-            }"
+            <Globe class="w-4.5 h-4.5" />
+            Classement Global
+          </button>
+          <button
+            @click="loadLeaderboard('friends')"
+            class="px-5 py-3 rounded-xl font-bold text-sm flex items-center gap-2.5 transition-all duration-300 cursor-pointer border"
+            :class="activeFilter === 'friends'
+              ? 'bg-gradient-to-r from-primary to-primary-light border-primary-light/20 text-white shadow-lg shadow-primary/20'
+              : 'border-transparent bg-transparent text-slate-400 hover:text-slate-200 hover:bg-white/[0.02]'"
           >
-            <!-- Rank number -->
-            <div class="flex items-center justify-center">
-              <span class="text-base font-black" style="color: #4b5563;">{{ i + 4 }}</span>
-            </div>
+            <Users class="w-4.5 h-4.5" />
+            Amis
+          </button>
+        </div>
 
-            <!-- Player -->
-            <div class="flex items-center gap-3">
-              <div
-                class="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-black border"
-                style="border-color: rgba(255,255,255,0.1); background: linear-gradient(135deg, rgba(155,113,52,0.15), rgba(184,147,92,0.08));"
-              >
-                <img v-if="user.avatarUrl" :src="getAvatarUrl(user.avatarUrl)" :alt="user.username" class="w-full h-full object-cover" @error="(e: any) => e.target.style.display='none'" />
-                <span v-else style="color: #9b7134;">{{ getInitials(user.username) }}</span>
+        <!-- Season Card Right -->
+        <div class="rounded-2xl border border-white/[0.08] bg-[#111621] px-5 py-3 flex items-center gap-3 shadow-lg">
+          <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Clock class="w-4.5 h-4.5 text-primary-light" />
+          </div>
+          <div class="flex flex-col">
+            <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Saison 5</span>
+            <span class="text-sm font-black text-slate-200">Se termine dans 12j 4h 23m</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Leaderboard Card -->
+      <div class="rounded-3xl border border-white/[0.06] bg-background-2/95 shadow-2xl backdrop-blur-md overflow-hidden mb-8">
+        
+        <!-- Table Headers -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] text-xs font-bold uppercase tracking-widest text-slate-500 bg-[#0e121b]">
+          <div class="w-24 text-left">Rang</div>
+          <div class="flex-1 text-left">Joueur</div>
+          <div class="w-24 text-right">MMR</div>
+          <div class="w-36 text-right">Parties Gagnées</div>
+        </div>
+
+        <!-- Loader -->
+        <div v-if="loading" class="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
+          <Loader2 class="w-10 h-10 animate-spin text-primary" />
+          <span class="text-xs font-bold uppercase tracking-widest text-slate-500 animate-pulse">Chargement de l'arène...</span>
+        </div>
+
+        <!-- Empty State -->
+        <div v-else-if="leaderboard.length === 0" class="p-16 text-center flex flex-col items-center justify-center">
+          <div class="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 text-slate-500">
+            <Trophy class="w-8 h-8 opacity-40" />
+          </div>
+          <h2 class="text-xl font-bold text-slate-300">Aucun joueur trouvé</h2>
+          <p class="text-sm text-slate-500 mt-2 max-w-sm leading-relaxed">
+            Il n'y a actuellement aucun joueur dans cette liste. Rejoignez ou créez une partie pour être le premier à inscrire votre nom !
+          </p>
+          <Button variant="primary" size="md" class="mt-6" @click="router.push('/')">
+            Lancer une partie
+          </Button>
+        </div>
+
+        <!-- Leaderboard List -->
+        <div v-else class="divide-y divide-white/[0.04]">
+          <div 
+            v-for="(user, index) in leaderboard" 
+            :key="user.id" 
+            @click="router.push(`/profile/${user.id}`)"
+            class="flex items-center justify-between px-6 py-4.5 transition-all duration-200 cursor-pointer hover:bg-white/[0.02]"
+            :class="[
+              index === 0 ? 'bg-primary/[0.03] border-y border-primary/10 shadow-[inset_0_1px_1px_rgba(255,255,255,0.02)]' : ''
+            ]"
+          >
+            <!-- Rank Column -->
+            <div class="w-24 flex items-center justify-start">
+              <!-- Top 3 Wreaths -->
+              <div v-if="index === 0" class="relative flex items-center justify-center w-12 h-12">
+                <svg class="w-11 h-11 text-amber-500 filter drop-shadow-[0_2px_4px_rgba(217,119,6,0.2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4.5 16.5C3.5 13 4.5 8.5 8 5.5M19.5 16.5C20.5 13 19.5 8.5 16 5.5" stroke-linecap="round" />
+                  <path d="M4.2 13c0.8-.6 1.8-.6 2.5 0M19.8 13c-.8-.6-1.8-.6-2.5 0M5.2 9.5c0.8-.6 1.8-.6 2.5 0M18.8 9.5c-.8-.6-1.8-.6-2.5 0" stroke-linecap="round" />
+                </svg>
+                <span class="absolute text-sm font-black text-amber-500 select-none">1</span>
               </div>
-              <span class="font-semibold text-sm" style="color: #cbd5e1;">{{ user.username }}</span>
+              
+              <div v-else-if="index === 1" class="relative flex items-center justify-center w-12 h-12">
+                <svg class="w-11 h-11 text-slate-300 filter drop-shadow-[0_2px_4px_rgba(203,213,225,0.2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4.5 16.5C3.5 13 4.5 8.5 8 5.5M19.5 16.5C20.5 13 19.5 8.5 16 5.5" stroke-linecap="round" />
+                  <path d="M4.2 13c0.8-.6 1.8-.6 2.5 0M19.8 13c-.8-.6-1.8-.6-2.5 0M5.2 9.5c0.8-.6 1.8-.6 2.5 0M18.8 9.5c-.8-.6-1.8-.6-2.5 0" stroke-linecap="round" />
+                </svg>
+                <span class="absolute text-sm font-black text-slate-300 select-none">2</span>
+              </div>
+              
+              <div v-else-if="index === 2" class="relative flex items-center justify-center w-12 h-12">
+                <svg class="w-11 h-11 text-amber-700 filter drop-shadow-[0_2px_4px_rgba(180,83,9,0.2)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4.5 16.5C3.5 13 4.5 8.5 8 5.5M19.5 16.5C20.5 13 19.5 8.5 16 5.5" stroke-linecap="round" />
+                  <path d="M4.2 13c0.8-.6 1.8-.6 2.5 0M19.8 13c-.8-.6-1.8-.6-2.5 0M5.2 9.5c0.8-.6 1.8-.6 2.5 0M18.8 9.5c-.8-.6-1.8-.6-2.5 0" stroke-linecap="round" />
+                </svg>
+                <span class="absolute text-sm font-black text-amber-700 select-none">3</span>
+              </div>
+              
+              <!-- Regular Rank Number -->
+              <div v-else class="text-sm font-bold text-slate-500 w-11 text-center select-none font-mono">
+                {{ index + 1 }}
+              </div>
             </div>
 
-            <!-- MMR -->
-            <div class="text-right font-bold text-sm font-mono" style="color: #64748b;">
-              {{ user.mmr }}
+            <!-- Player Column -->
+            <div class="flex-1 flex items-center gap-4">
+              <!-- Avatar Circle with Custom Rank Border -->
+              <div 
+                class="w-11 h-11 rounded-xl overflow-hidden flex-shrink-0 border flex items-center justify-center text-sm font-black transition-all bg-background-1 shadow-inner"
+                :class="[
+                  index === 0 ? 'border-amber-500 shadow-amber-500/10' :
+                  index === 1 ? 'border-slate-400' :
+                  index === 2 ? 'border-amber-700' :
+                  'border-white/[0.08]'
+                ]"
+              >
+                <img 
+                  v-if="user.avatarUrl" 
+                  :src="user.avatarUrl.startsWith('http') ? user.avatarUrl : `http://localhost:3000${user.avatarUrl}`" 
+                  :alt="user.username" 
+                  class="w-full h-full object-cover animate-fade-in" 
+                  @error="(e: any) => e.target.style.display='none'" 
+                />
+                <span 
+                  v-else 
+                  :class="[
+                    index === 0 ? 'text-amber-400' :
+                    index === 1 ? 'text-slate-300' :
+                    index === 2 ? 'text-amber-600' :
+                    'text-slate-400'
+                  ]"
+                >
+                  {{ (user.username || '?').slice(0, 2).toUpperCase() }}
+                </span>
+              </div>
+
+              <!-- Username & Optional Crown -->
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-base text-slate-200 hover:text-white transition-colors">
+                  {{ user.username }}
+                </span>
+                <!-- Floating Gold Crown for #1 -->
+                <Crown 
+                  v-if="index === 0" 
+                  class="w-4 h-4 text-amber-500 filter drop-shadow-[0_0_8px_rgba(217,119,6,0.6)] animate-pulse" 
+                />
+              </div>
             </div>
 
-            <!-- Wins -->
-            <div class="text-right pr-2 font-bold text-sm" style="color: #4b5563;">
-              {{ user.winsCount ?? 0 }}
+            <!-- MMR Column -->
+            <div class="w-24 text-right">
+              <span 
+                class="font-mono font-black text-base md:text-lg"
+                :class="index === 0 ? 'text-amber-500' : 'text-slate-300'"
+              >
+                {{ user.mmr }}
+              </span>
             </div>
+
+            <!-- Victories (Parties Gagnées) Column -->
+            <div class="w-36 text-right">
+              <span class="font-mono font-bold text-sm md:text-base text-slate-400">
+                {{ user.wins ?? 0 }}
+              </span>
+            </div>
+
           </div>
-        </template>
+        </div>
+
       </div>
-    </div>
 
-    <!-- ═══════════════════ FOOTER ═══════════════════ -->
-    <div class="footer-section mx-5 mb-5 rounded-2xl px-6 py-5" style="background: rgba(155,113,52,0.06); border: 1px solid rgba(155,113,52,0.15);">
-      <div class="grid grid-cols-3 gap-6">
-        <!-- Item 1 -->
-        <div class="flex items-start gap-4">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.2);">
-            <Crown class="w-5 h-5" style="color: #fbbf24;" />
+      <!-- Footer Info Section -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- Feature 1 -->
+        <div class="rounded-2xl border border-white/[0.05] bg-[#0d1017]/80 p-6 flex gap-4 items-start shadow-md hover:border-white/[0.08] transition-all">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 flex-shrink-0 shadow-[0_4px_12px_rgba(217,119,6,0.05)]">
+            <Crown class="w-6 h-6" />
           </div>
           <div>
-            <p class="font-black text-sm" style="color: #fbbf24;">Jouez, gagnez, progressez</p>
-            <p class="text-xs mt-1 leading-relaxed" style="color: #64748b;">Gravissez les échelons et devenez le Président de la saison.</p>
+            <h4 class="font-bold text-slate-200 text-sm md:text-base leading-tight">Jouez, gagnez, progressez</h4>
+            <p class="text-xs text-slate-400 mt-1.5 leading-relaxed font-medium">
+              Gravissez les échelons et devenez le Président de la saison.
+            </p>
           </div>
         </div>
 
-        <!-- Item 2 -->
-        <div class="flex items-start gap-4">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background: rgba(155,113,52,0.12); border: 1px solid rgba(155,113,52,0.2);">
-            <Star class="w-5 h-5" style="color: #9b7134;" />
+        <!-- Feature 2 -->
+        <div class="rounded-2xl border border-white/[0.05] bg-[#0d1017]/80 p-6 flex gap-4 items-start shadow-md hover:border-white/[0.08] transition-all">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 flex-shrink-0 shadow-[0_4px_12px_rgba(217,119,6,0.05)]">
+            <Award class="w-6 h-6" />
           </div>
           <div>
-            <p class="font-black text-sm" style="color: #f59e0b;">Saison X en cours</p>
-            <p class="text-xs mt-1 leading-relaxed" style="color: #64748b;">Se termine dans {{ timeLeft.days }}j {{ timeLeft.hours }}h {{ String(timeLeft.minutes).padStart(2, '0') }}min</p>
+            <h4 class="font-bold text-slate-200 text-sm md:text-base leading-tight">Saison 5 en cours</h4>
+            <p class="text-xs text-slate-400 mt-1.5 leading-relaxed font-medium">
+              Se termine le 15 juillet 2024
+            </p>
           </div>
         </div>
 
-        <!-- Item 3 -->
-        <div class="flex items-start gap-4">
-          <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background: rgba(155,113,52,0.12); border: 1px solid rgba(155,113,52,0.2);">
-            <Award class="w-5 h-5" style="color: #9b7134;" />
+        <!-- Feature 3 -->
+        <div class="rounded-2xl border border-white/[0.05] bg-[#0d1017]/80 p-6 flex gap-4 items-start shadow-md hover:border-white/[0.08] transition-all">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 flex-shrink-0 shadow-[0_4px_12px_rgba(217,119,6,0.05)]">
+            <Gift class="w-6 h-6" />
           </div>
           <div>
-            <p class="font-black text-sm" style="color: #f1f5f9;">Récompenses exclusives</p>
-            <p class="text-xs mt-1 leading-relaxed" style="color: #64748b;">Des prix uniques pour les meilleurs joueurs en fin de saison.</p>
+            <h4 class="font-bold text-slate-200 text-sm md:text-base leading-tight">Récompenses exclusives</h4>
+            <p class="text-xs text-slate-400 mt-1.5 leading-relaxed font-medium">
+              Des prix uniques pour les meilleurs joueurs en fin de saison.
+            </p>
           </div>
         </div>
+
       </div>
+
     </div>
   </div>
 </template>
 
 <style scoped>
-.leaderboard-page {
-  min-height: 100vh;
+.font-cinzel {
+  font-family: 'Cinzel', serif;
 }
-
-/* Filter buttons */
-.filter-btn {
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
-  white-space: nowrap;
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
 }
-
-.filter-btn--active {
-  background: rgba(155, 113, 52, 0.18);
-  border-color: rgba(155, 113, 52, 0.6);
-  color: #fbbf24;
-}
-
-.filter-btn--inactive {
-  background: rgba(255, 255, 255, 0.03);
-  border-color: rgba(255, 255, 255, 0.08);
-  color: #64748b;
-}
-
-.filter-btn--inactive:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #94a3b8;
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-/* Row hover */
-.leaderboard-row:hover {
-  background: rgba(255, 255, 255, 0.04) !important;
-}
-
-/* Hero banner */
-.hero-banner {
-  border: 1px solid rgba(155, 113, 52, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
 }
 </style>

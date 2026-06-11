@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://president-api.onrender.com/api/:path*"
+    },
+    {
+      "source": "/colyseus/:path*",
+      "destination": "https://president-game-server.onrender.com/:path*"
+    },
+    {
+      "source": "/rooms",
+      "destination": "https://president-game-server.onrender.com/rooms"
+    },
+    {
+      "source": "/roomByCode/:path*",
+      "destination": "https://president-game-server.onrender.com/roomByCode/:path*"
+    }
+  ]
+}
