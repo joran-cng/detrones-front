@@ -26,7 +26,7 @@ test('successful registration, lobby redirection, and game creation', async ({ p
   await expect(page).toHaveURL('/');
 
   // 5. Cliquer sur "Créer une partie" pour ouvrir le modal
-  const createGameBtn = page.getByRole('button', { name: 'Créer une partie' });
+  const createGameBtn = page.getByRole('button', { name: 'Créer une partie', exact: true });
   await expect(createGameBtn).toBeVisible();
   await createGameBtn.click();
 

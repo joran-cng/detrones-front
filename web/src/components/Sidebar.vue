@@ -44,8 +44,9 @@ async function fetchNotifications() {
 }
 
 onMounted(() => {
-  fetchNotifications()
-  notifInterval = setInterval(fetchNotifications, 30000)
+  // Polling désactivé car le chat n'est pas implémenté côté serveur
+  // fetchNotifications()
+  // notifInterval = setInterval(fetchNotifications, 30000)
 })
 
 onUnmounted(() => {
@@ -161,7 +162,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Conversations -->
+        <!-- Conversations (Désactivé car non implémenté)
         <div class="relative">
           <Button
             :variant="isConversationsActive ? 'primary' : 'ghost'"
@@ -174,7 +175,6 @@ onUnmounted(() => {
           >
             Conversations
           </Button>
-          <!-- Notification badge for unread messages -->
           <div
             v-if="unreadMessages > 0"
             class="absolute top-1 right-1 min-w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-black pointer-events-none"
@@ -183,6 +183,7 @@ onUnmounted(() => {
             {{ unreadMessages > 9 ? '9+' : unreadMessages }}
           </div>
         </div>
+        -->
 
         <!-- Mon Profil -->
         <Button
