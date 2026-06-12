@@ -21,6 +21,7 @@ onMounted(async () => {
 </script>
 
 <template>
+  <!-- Test -->
   <div class="min-h-screen" style="background: #0f0f1a;">
     <nav class="flex items-center justify-between px-8 py-4" style="border-bottom: 1px solid rgba(255,255,255,0.06);">
       <div class="flex items-center gap-2 cursor-pointer" @click="router.push('/')">
