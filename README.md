@@ -52,32 +52,31 @@ pnpm run test:unit
 
 Le projet intègre une chaîne d'intégration et de déploiement continu automatisée avec **GitHub Actions**.
 
-### Schéma de l'Architecture CI/CD
+### Schéma de l'Architecture CI/CD (Architecture DAG)
 
 ```mermaid
 graph TD
-    Developer[Développeur] -->|git push branch| GitHub{GitHub Repository}
-    GitHub -->|Déclenche la CI/CD| Actions[GitHub Actions Runner]
+    Developer[Développeur] -->|git push| GitHub{GitHub}
     
-    subgraph CI : Intégration Continue
-        Actions -->|1. Setup| Env[Node.js v20 & PNPM Cache]
-        Env -->|2. Install| Deps[pnpm install --frozen-lockfile]
-        Deps -->|3. Compile| Build[pnpm build Vite/TS]
-        Build -->|4. Test| Tests[pnpm test Vitest]
-        Tests -->|5. Sécurité| Audit[pnpm audit CVEs]
+    subgraph Jobs de Validation (Parallèles)
+        GitHub -->|Job 1| Build[Build Application]
+        GitHub -->|Job 2| Tests[Unit Tests Vitest]
+        GitHub -->|Job 3| Audit[Security Audit]
     end
     
-    subgraph CD : Déploiement Continu
-        Audit -->|6. Condition: Push sur main| Deploy[Vercel Deploy CLI]
-        Deploy -->|Production Live| Vercel[Production: Vercel CDN]
-    end
+    Build -->|needs: build, unit-tests, security-audit| E2E[Job 4: Playwright E2E Tests]
+    Tests --> E2E
+    Audit --> E2E
+    
+    E2E -->|needs: e2e-tests, Condition: Push sur main| Deploy[Job 5: Deploy to Vercel]
 ```
 
 ### Fonctionnement du Pipeline (`.github/workflows/deploy.yml`)
 
-Le pipeline est configuré pour s'exécuter automatiquement à chaque modification de code :
-*   **Sur les Pull Requests vers `main`** : Il exécute uniquement les phases d'Intégration Continue (Installation, Build, Tests unitaires et Audit de sécurité) pour s'assurer que la branche n'introduit aucune régression.
-*   **Sur les Pushes directs ou Fusions sur `main`** : Il exécute toutes les étapes d'intégration, puis déploie automatiquement l'application compilée en production sur **Vercel** grâce à l'enchaînement de commandes `vercel --prebuilt`.
+Le pipeline est structuré en **5 jobs distincts** qui s'exécutent de la manière suivante :
+*   **Validation Parallèle** : Dès qu'une modification est soumise (Push ou Pull Request sur `main`), les jobs de validation (Build, Tests Unitaires, Audit de sécurité) démarrent en parallèle sur 3 runners différents pour un feedback immédiat.
+*   **Tests End-to-End** : Si et seulement si ces 3 jobs passent au vert, le job `e2e-tests` démarre. Il s'occupe de cloner le backend, démarrer Postgres & Redis, puis lancer les tests Playwright de manière isolée.
+*   **Déploiement Continu** : En cas de push sur `main`, et après succès des tests E2E, le job de déploiement pousse les fichiers de production sur **Vercel** (`vercel deploy`).
 
 ### Comment suivre les exécutions et les logs
 1. Allez sur le dépôt GitHub du projet.
