@@ -4,11 +4,9 @@ on:
   push:
     branches:
       - main
-      - master
   pull_request:
     branches:
       - main
-      - master
 
 jobs:
   build-test-deploy:
@@ -46,8 +44,8 @@ jobs:
       - name: Run Security Audit
         run: pnpm audit --audit-level=high || echo "Audit completed with some warnings"
 
-      # 8. Étape 4 : Déploiement automatique sur Vercel
-      # Cette étape ne s'exécute que sur push sur main/master, pas sur les Pull Requests
+      # Étape 4 : Déploiement automatique sur Vercel
+      # Cette étape ne s'exécute que sur push sur main, pas sur les Pull Requests
       - name: Deploy to Vercel (Production)
         if: github.event_name == 'push'
         env:
