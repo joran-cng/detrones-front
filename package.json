@@ -6,7 +6,8 @@
     "dev": "pnpm -r --parallel run dev",
     "build": "pnpm -r run build",
     "lint": "pnpm -r run lint",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "test:e2e": "pnpm --filter @president/web run test:e2e"
   },
   "devDependencies": {
     "typescript": "^5.0.0",

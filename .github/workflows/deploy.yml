@@ -44,6 +44,46 @@ jobs:
       - name: Run Tests
         run: pnpm test
 
+      # 6.5. Étape 2.5 : Tests E2E automatisés (Playwright)
+      - name: Checkout Backend Repo
+        uses: actions/checkout@v4
+        with:
+          repository: joran-cng/detrones-back
+          path: backend-repo
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Start Postgres & Redis (Docker Compose)
+        working-directory: backend-repo
+        run: docker compose up postgres redis -d
+
+      - name: Install Backend Dependencies
+        working-directory: backend-repo
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Backend Prisma Migrations
+        working-directory: backend-repo
+        env:
+          DATABASE_URL: "postgresql://user:password@localhost:5432/president?schema=public"
+        run: pnpm --filter @president/back exec prisma db push
+
+      - name: Install Playwright Browsers
+        working-directory: web
+        run: npx playwright install chromium --with-deps
+
+      - name: Run Playwright E2E Tests
+        env:
+          DATABASE_URL: "postgresql://user:password@localhost:5432/president?schema=public"
+        run: |
+          cd backend-repo
+          pnpm run dev &
+          echo "Waiting for backend API to respond on port 3000..."
+          for i in {1..40}; do curl -s http://localhost:3000/api/health && break || sleep 1; done
+          cd ../web
+          pnpm run dev &
+          echo "Waiting for frontend to respond on port 5173..."
+          for i in {1..30}; do curl -s http://localhost:5173 && break || sleep 1; done
+          pnpm run test:e2e
+
       # 7. Étape 3 : Audit de sécurité des dépendances
       - name: Run Security Audit
         run: pnpm audit --audit-level=high || echo "Audit completed with some warnings"
