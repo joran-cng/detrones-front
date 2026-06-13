@@ -136,7 +136,7 @@ onUnmounted(() => {
   <div class="min-h-screen leaderboard-page" style="background: #070c15;">
 
     <!-- ═══════════════════ HERO BANNER ═══════════════════ -->
-    <div class="hero-banner relative overflow-hidden" style="border-radius: 16px; margin: 20px 20px 0; min-height: 160px;">
+    <div class="hero-banner relative overflow-hidden" style="border-radius: 16px; margin: 16px 16px 0; min-height: 140px; sm:min-height: 160px;">
       <!-- Background image -->
       <img
           src="/leaderboard_hero.png"
@@ -147,33 +147,33 @@ onUnmounted(() => {
       <!-- Dark overlay -->
       <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(7,12,21,0.92) 0%, rgba(7,12,21,0.75) 50%, rgba(7,12,21,0.3) 100%);"></div>
       <!-- Content -->
-      <div class="relative z-10 flex flex-col justify-center px-8 py-7 h-full" style="min-height: 160px;">
+      <div class="relative z-10 flex flex-col justify-center px-6 sm:px-8 py-6 sm:py-7 h-full" style="min-height: 140px; sm:min-height: 160px;">
         <div class="flex items-center gap-2 mb-2">
-          <Trophy class="w-5 h-5" style="color: #fbbf24;" />
-          <span class="text-xs font-bold tracking-widest uppercase" style="color: #9b7134;">Les meilleurs joueurs s'affrontent pour devenir le Président.</span>
+          <Trophy class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" style="color: #fbbf24;" />
+          <span class="text-[10px] sm:text-xs font-bold tracking-widest uppercase" style="color: #9b7134;">Les meilleurs joueurs s'affrontent pour devenir le Président.</span>
         </div>
-        <h1 class="font-black tracking-widest uppercase" style="font-size: 2.2rem; color: #f1f5f9; font-family: 'Cinzel', serif; text-shadow: 0 2px 16px rgba(0,0,0,0.7);">CLASSEMENT</h1>
+        <h1 class="font-black tracking-widest uppercase" style="font-size: 1.8rem; sm:font-size: 2.2rem; color: #f1f5f9; font-family: 'Cinzel', serif; text-shadow: 0 2px 16px rgba(0,0,0,0.7);">CLASSEMENT</h1>
       </div>
     </div>
 
     <!-- ═══════════════════ FILTERS + SEASON ═══════════════════ -->
-    <div class="flex items-center justify-between px-5 py-4" style="gap: 12px;">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between px-4 sm:px-5 py-4 gap-4">
       <!-- Filter Buttons -->
       <div class="flex gap-2">
         <!-- Classement Global -->
         <button
             @click="setFilter('global')"
-            class="filter-btn flex items-center gap-2"
+            class="filter-btn flex items-center justify-center gap-2 flex-1 sm:flex-initial"
             :class="activeFilter === 'global' ? 'filter-btn--active' : 'filter-btn--inactive'"
         >
           <Globe class="w-4 h-4" />
-          <span>Classement Global</span>
+          <span>Global</span>
         </button>
 
         <!-- Amis -->
         <button
             @click="setFilter('friends')"
-            class="filter-btn flex items-center gap-2"
+            class="filter-btn flex items-center justify-center gap-2 flex-1 sm:flex-initial"
             :class="activeFilter === 'friends' ? 'filter-btn--active' : 'filter-btn--inactive'"
         >
           <Users class="w-4 h-4" />
@@ -182,19 +182,19 @@ onUnmounted(() => {
       </div>
 
       <!-- Season Info -->
-      <div class="season-badge flex items-center gap-3 px-4 py-2.5 rounded-xl" style="background: rgba(20,15,5,0.8); border: 1px solid rgba(155,113,52,0.3); backdrop-filter: blur(8px);">
+      <div class="season-badge flex items-center gap-3 px-4 py-2 rounded-xl w-full sm:w-auto justify-center sm:justify-start" style="background: rgba(20,15,5,0.8); border: 1px solid rgba(155,113,52,0.3); backdrop-filter: blur(8px);">
         <Clock class="w-4 h-4 flex-shrink-0" style="color: #fbbf24;" />
-        <div class="text-right">
+        <div class="text-left">
           <div class="text-xs font-black tracking-wider" style="color: #fbbf24;">Saison X</div>
-          <div class="text-xs" style="color: #94a3b8;">
-            Se termine dans {{ timeLeft.days }}j {{ timeLeft.hours }}h {{ String(timeLeft.minutes).padStart(2, '0') }}min
+          <div class="text-[11px] sm:text-xs" style="color: #94a3b8;">
+            Fin : {{ timeLeft.days }}j {{ timeLeft.hours }}h {{ String(timeLeft.minutes).padStart(2, '0') }}m
           </div>
         </div>
       </div>
     </div>
 
     <!-- ═══════════════════ LEADERBOARD TABLE ═══════════════════ -->
-    <div class="px-5 pb-5">
+    <div class="px-4 sm:px-5 pb-5">
       <div class="leaderboard-table rounded-2xl overflow-hidden" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);">
 
         <!-- Loading -->
@@ -211,11 +211,11 @@ onUnmounted(() => {
 
         <template v-else>
           <!-- Table Header -->
-          <div class="table-header grid items-center px-6 py-3" style="grid-template-columns: 80px 1fr 140px 160px; border-bottom: 1px solid rgba(255,255,255,0.06);">
-            <span class="text-xs font-bold uppercase tracking-widest" style="color: #4b5563;">RANG</span>
-            <span class="text-xs font-bold uppercase tracking-widest" style="color: #4b5563;">JOUEUR</span>
-            <span class="text-xs font-bold uppercase tracking-widest text-right" style="color: #4b5563;">MMR</span>
-            <span class="text-xs font-bold uppercase tracking-widest text-right pr-2" style="color: #4b5563;">PARTIES GAGNÉES</span>
+          <div class="table-header grid items-center px-4 sm:px-6 py-3 grid-cols-[50px_1fr_80px] sm:grid-cols-[80px_1fr_120px_140px]" style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500">RANG</span>
+            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500">JOUEUR</span>
+            <span class="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-right text-slate-500">MMR</span>
+            <span class="hidden sm:inline text-[10px] sm:text-xs font-bold uppercase tracking-widest text-right pr-2 text-slate-500">PARTIES GAGNÉES</span>
           </div>
 
           <!-- Top 3 rows -->
@@ -223,23 +223,22 @@ onUnmounted(() => {
               v-for="(user, index) in top3"
               :key="user.id"
               @click="router.push(`/profile/${user.id}`)"
-              class="leaderboard-row grid items-center px-6 py-3 cursor-pointer transition-all"
+              class="leaderboard-row grid items-center px-4 sm:px-6 py-3 cursor-pointer transition-all grid-cols-[50px_1fr_80px] sm:grid-cols-[80px_1fr_120px_140px]"
               :style="{
-              gridTemplateColumns: '80px 1fr 140px 160px',
               background: getRankBg(index),
               borderBottom: '1px solid rgba(255,255,255,0.04)',
             }"
           >
             <!-- Rank badge -->
-            <div class="flex items-center justify-center w-12 h-12">
-              <img :src="getRankImage(index)" :alt="`Rang ${index + 1}`" class="w-12 h-12 object-contain" />
+            <div class="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12">
+              <img :src="getRankImage(index)" :alt="`Rang ${index + 1}`" class="w-10 h-10 sm:w-12 sm:h-12 object-contain" />
             </div>
 
             <!-- Player -->
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
               <!-- Avatar -->
               <div
-                  class="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-sm font-black border-2"
+                  class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs sm:text-sm font-black border-2"
                   :style="{
                   borderColor: index === 0 ? '#fbbf24' : index === 1 ? '#94a3b8' : '#b45309',
                   background: user.avatarUrl ? 'transparent' : `linear-gradient(135deg, rgba(155,113,52,0.3), rgba(184,147,92,0.15))`
@@ -249,21 +248,21 @@ onUnmounted(() => {
                 <span v-else style="color: #b8935c;">{{ getInitials(user.username) }}</span>
               </div>
               <!-- Name + crown for #1 -->
-              <div class="flex flex-col">
-                <div class="flex items-center gap-1.5">
-                  <span class="font-bold text-sm" style="color: #f1f5f9;">{{ user.username }}</span>
-                  <Crown v-if="index === 0" class="w-4 h-4" style="color: #fbbf24;" />
+              <div class="flex flex-col min-w-0">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="font-bold text-xs sm:text-sm text-slate-100 truncate">{{ user.username }}</span>
+                  <Crown v-if="index === 0" class="w-3.5 h-3.5 flex-shrink-0" style="color: #fbbf24;" />
                 </div>
               </div>
             </div>
 
             <!-- MMR -->
-            <div class="text-right font-black text-lg font-mono" :style="{ color: getMmrColor(index) }">
+            <div class="text-right font-black text-base sm:text-lg font-mono" :style="{ color: getMmrColor(index) }">
               {{ user.mmr }}
             </div>
 
             <!-- Wins -->
-            <div class="text-right pr-2 font-bold text-sm" style="color: #94a3b8;">
+            <div class="hidden sm:block text-right pr-2 font-bold text-sm" style="color: #94a3b8;">
               {{ user.winsCount ?? 0 }}
             </div>
           </div>
@@ -273,36 +272,35 @@ onUnmounted(() => {
               v-for="(user, i) in rest"
               :key="user.id"
               @click="router.push(`/profile/${user.id}`)"
-              class="leaderboard-row grid items-center px-6 py-3.5 cursor-pointer transition-all"
+              class="leaderboard-row grid items-center px-4 sm:px-6 py-3.5 cursor-pointer transition-all grid-cols-[50px_1fr_80px] sm:grid-cols-[80px_1fr_120px_140px]"
               :style="{
-              gridTemplateColumns: '80px 1fr 140px 160px',
               borderBottom: i < rest.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
             }"
           >
             <!-- Rank number -->
             <div class="flex items-center justify-center">
-              <span class="text-base font-black" style="color: #4b5563;">{{ i + 4 }}</span>
+              <span class="text-sm sm:text-base font-black text-slate-500">{{ i + 4 }}</span>
             </div>
 
             <!-- Player -->
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0">
               <div
-                  class="w-9 h-9 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-black border"
+                  class="w-7 h-7 sm:w-9 sm:h-9 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-[10px] sm:text-xs font-black border"
                   style="border-color: rgba(255,255,255,0.1); background: linear-gradient(135deg, rgba(155,113,52,0.15), rgba(184,147,92,0.08));"
               >
                 <img v-if="user.avatarUrl" :src="getAvatarUrl(user.avatarUrl)" :alt="user.username" class="w-full h-full object-cover" @error="(e: any) => e.target.style.display='none'" />
                 <span v-else style="color: #9b7134;">{{ getInitials(user.username) }}</span>
               </div>
-              <span class="font-semibold text-sm" style="color: #cbd5e1;">{{ user.username }}</span>
+              <span class="font-semibold text-xs sm:text-sm text-slate-300 truncate">{{ user.username }}</span>
             </div>
 
             <!-- MMR -->
-            <div class="text-right font-bold text-sm font-mono" style="color: #64748b;">
+            <div class="text-right font-bold text-xs sm:text-sm font-mono text-slate-400">
               {{ user.mmr }}
             </div>
 
             <!-- Wins -->
-            <div class="text-right pr-2 font-bold text-sm" style="color: #4b5563;">
+            <div class="hidden sm:block text-right pr-2 font-bold text-sm" style="color: #4b5563;">
               {{ user.winsCount ?? 0 }}
             </div>
           </div>
@@ -311,8 +309,8 @@ onUnmounted(() => {
     </div>
 
     <!-- ═══════════════════ FOOTER ═══════════════════ -->
-    <div class="footer-section mx-5 mb-5 rounded-2xl px-6 py-5" style="background: rgba(155,113,52,0.06); border: 1px solid rgba(155,113,52,0.15);">
-      <div class="grid grid-cols-3 gap-6">
+    <div class="footer-section mx-4 sm:mx-5 mb-5 rounded-2xl px-5 sm:px-6 py-5" style="background: rgba(155,113,52,0.06); border: 1px solid rgba(155,113,52,0.15);">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <!-- Item 1 -->
         <div class="flex items-start gap-4">
           <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.2);">
@@ -331,7 +329,7 @@ onUnmounted(() => {
           </div>
           <div>
             <p class="font-black text-sm" style="color: #f59e0b;">Saison X en cours</p>
-            <p class="text-xs mt-1 leading-relaxed" style="color: #64748b;">Se termine dans {{ timeLeft.days }}j {{ timeLeft.hours }}h {{ String(timeLeft.minutes).padStart(2, '0') }}min</p>
+            <p class="text-xs mt-1 leading-relaxed" style="color: #64748b;">Fin dans {{ timeLeft.days }}j {{ timeLeft.hours }}h {{ String(timeLeft.minutes).padStart(2, '0') }}m</p>
           </div>
         </div>
 

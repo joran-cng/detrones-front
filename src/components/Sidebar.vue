@@ -55,8 +55,9 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <!-- Desktop Sidebar (hidden on mobile/tablet) -->
   <aside 
-    class="w-64 h-screen fixed left-0 top-0 z-30 flex flex-col justify-between border-r select-none bg-background-2"
+    class="hidden lg:flex w-64 h-screen fixed left-0 top-0 z-30 flex-col justify-between border-r select-none bg-background-2"
     style="border-color: rgba(255, 255, 255, 0.03);"
   >
     <!-- Top Section -->
@@ -214,4 +215,57 @@ onUnmounted(() => {
       </Button>
     </div>
   </aside>
+
+  <!-- Mobile/Tablet Bottom Navbar (hidden on desktop) -->
+  <div 
+    class="flex lg:hidden fixed bottom-0 left-0 right-0 h-16 z-30 bg-background-2 border-t select-none items-center justify-around px-2 pb-safe shadow-[0_-8px_24px_rgba(0,0,0,0.4)]"
+    style="border-color: rgba(255, 255, 255, 0.03); backdrop-filter: blur(16px);"
+  >
+    <!-- Salon de Jeu -->
+    <button 
+      @click="router.push('/')" 
+      class="flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all duration-200"
+      :class="isLobbyActive ? 'text-primary' : 'text-slate-400 hover:text-slate-200'"
+    >
+      <component :is="Icons.Gamepad2" class="w-5 h-5" />
+      <span class="text-[8px] sm:text-[9px] font-bold tracking-wider uppercase font-cinzel text-center">Salon de jeu</span>
+    </button>
+
+    <!-- Amis -->
+    <button 
+      @click="router.push('/friends')" 
+      class="flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all duration-200 relative"
+      :class="isFriendsActive ? 'text-primary' : 'text-slate-400 hover:text-slate-200'"
+    >
+      <component :is="Icons.Users" class="w-5 h-5" />
+      <span class="text-[8px] sm:text-[9px] font-bold tracking-wider uppercase font-cinzel text-center">Amis</span>
+      <div
+        v-if="pendingRequests > 0"
+        class="absolute top-2 right-1/2 translate-x-4 min-w-[14px] h-[14px] px-1 rounded-full flex items-center justify-center text-[8px] font-black"
+        style="background: #fbbf24; color: #0f0c00;"
+      >
+        {{ pendingRequests > 9 ? '9+' : pendingRequests }}
+      </div>
+    </button>
+
+    <!-- Classement -->
+    <button 
+      @click="router.push('/leaderboard')" 
+      class="flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all duration-200"
+      :class="isLeaderboardActive ? 'text-primary' : 'text-slate-400 hover:text-slate-200'"
+    >
+      <component :is="Icons.Trophy" class="w-5 h-5" />
+      <span class="text-[8px] sm:text-[9px] font-bold tracking-wider uppercase font-cinzel text-center">Classement</span>
+    </button>
+
+    <!-- Mon Profil -->
+    <button 
+      @click="router.push(authStore.user ? `/profile/${authStore.user.id}` : '/profile')" 
+      class="flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all duration-200"
+      :class="isProfileActive ? 'text-primary' : 'text-slate-400 hover:text-slate-200'"
+    >
+      <component :is="Icons.User" class="w-5 h-5" />
+      <span class="text-[8px] sm:text-[9px] font-bold tracking-wider uppercase font-cinzel text-center">Mon profil</span>
+    </button>
+  </div>
 </template>

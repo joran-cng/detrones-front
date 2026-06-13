@@ -336,7 +336,7 @@ function getMmrRank(mmr: number) {
 </script>
 
 <template>
-  <div class="px-8 py-10 relative">
+  <div class="px-4 py-6 sm:px-8 sm:py-10 relative">
     <div class="w-full relative z-10">
       <div v-if="loading" class="flex items-center justify-center py-20">
         <div class="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
@@ -344,37 +344,37 @@ function getMmrRank(mmr: number) {
 
       <div v-else-if="profileUser" class="space-y-6">
         <!-- Profile Header -->
-        <div class="rounded-2xl p-8 relative overflow-hidden bg-background-2 border"
+        <div class="rounded-2xl p-6 sm:p-8 relative overflow-hidden bg-background-2 border"
              style="border-color: rgba(255,255,255,0.06); backdrop-filter: blur(12px);">
 
-          <div class="flex items-start justify-between relative gap-4 flex-wrap">
-            <div class="flex items-center gap-6">
+          <div class="flex flex-col md:flex-row items-center md:items-start justify-between relative gap-6 w-full">
+            <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-6 w-full md:w-auto">
               <!-- Avatar display -->
-              <div class="relative">
+              <div class="relative flex-shrink-0">
                 <div v-if="resolveAvatarUrl(profileUser.avatarUrl)"
-                  class="w-24 h-24 rounded-2xl overflow-hidden ring-2 ring-primary/30 bg-[#241e15]">
+                  class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden ring-2 ring-primary/30 bg-[#241e15]">
                   <img :src="resolveAvatarUrl(profileUser.avatarUrl)!" :alt="profileUser.username"
                     class="w-full h-full object-cover"
                     @error="(e: any) => { e.target.style.display='none' }" />
                 </div>
                 <div v-else
-                  class="w-24 h-24 rounded-2xl flex items-center justify-center text-2xl font-black ring-2 ring-primary/20 bg-gradient-to-br from-primary to-primary-light text-white">
+                  class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center text-xl sm:text-2xl font-black ring-2 ring-primary/20 bg-gradient-to-br from-primary to-primary-light text-white">
                   {{ getInitials(profileUser.username) }}
                 </div>
                 <!-- Camera icon for own profile -->
                 <button v-if="isMyProfile" @click="openEditPanel"
-                  class="absolute -bottom-1 -right-1 w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110 cursor-pointer border border-primary-light/30 bg-gradient-to-br from-primary to-primary-light shadow-[0_4px_10px_rgba(155,113,52,0.3)] hover:shadow-[0_4px_12px_rgba(155,113,52,0.5)]">
-                  <Camera class="w-4 h-4 text-white" />
+                  class="absolute -bottom-1 -right-1 w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110 cursor-pointer border border-primary-light/30 bg-gradient-to-br from-primary to-primary-light shadow-[0_4px_10px_rgba(155,113,52,0.3)] hover:shadow-[0_4px_12px_rgba(155,113,52,0.5)]">
+                  <Camera class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
                 </button>
               </div>
 
-              <div>
-                <h1 class="text-3xl font-black text-slate-100">{{ profileUser.username }}</h1>
-                <p class="text-sm mt-1 text-slate-400">
+              <div class="min-w-0">
+                <h1 class="text-2xl sm:text-3xl font-black text-slate-100 truncate">{{ profileUser.username }}</h1>
+                <p class="text-xs sm:text-sm mt-1 text-slate-400">
                   Membre depuis {{ new Date(profileUser.createdAt).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }) }}
                 </p>
-                <div class="flex items-center gap-2 mt-2.5">
-                  <component :is="getMmrRank(profileUser.mmr).icon" class="w-4 h-4" :style="{ color: getMmrRank(profileUser.mmr).color }" />
+                <div class="flex items-center justify-center sm:justify-start gap-2 mt-2.5">
+                  <component :is="getMmrRank(profileUser.mmr).icon" class="w-4 h-4 flex-shrink-0" :style="{ color: getMmrRank(profileUser.mmr).color }" />
                   <span class="text-xs font-bold px-2.5 py-0.5 rounded-full"
                     :style="{ background: getMmrRank(profileUser.mmr).color + '15', color: getMmrRank(profileUser.mmr).color, border: `1px solid ${getMmrRank(profileUser.mmr).color}25` }">
                     {{ getMmrRank(profileUser.mmr).label }}
@@ -383,9 +383,9 @@ function getMmrRank(mmr: number) {
               </div>
             </div>
 
-            <div class="flex flex-col items-end gap-3.5">
-              <div class="text-right">
-                <div class="text-4xl font-mono font-black text-primary">{{ profileUser.mmr }}</div>
+            <div class="flex flex-col items-center md:items-end gap-3.5 w-full md:w-auto">
+              <div class="text-center md:text-right">
+                <div class="text-3xl sm:text-4xl font-mono font-black text-primary">{{ profileUser.mmr }}</div>
                 <div class="text-[10px] font-bold uppercase tracking-widest mt-0.5 text-slate-500">Points MMR</div>
               </div>
               
@@ -393,6 +393,7 @@ function getMmrRank(mmr: number) {
                 variant="secondary"
                 size="sm"
                 :icon="Pencil"
+                class="w-full sm:w-auto"
               >
                 Modifier le profil
               </Button>
@@ -402,6 +403,7 @@ function getMmrRank(mmr: number) {
                 variant="secondary"
                 size="sm"
                 :icon="UserPlus"
+                class="w-full sm:w-auto"
               >
                 Ajouter en ami
               </Button>
@@ -411,21 +413,22 @@ function getMmrRank(mmr: number) {
                 variant="ghost"
                 size="sm"
                 :icon="Clock"
+                class="w-full sm:w-auto"
               >
                 Demande envoyée
               </Button>
 
               <!-- They sent me a request: accept or decline -->
-              <template v-if="!isMyProfile && relationshipStatus === 'PENDING_RECEIVED'">
-                <Button @click="acceptRequest" variant="primary" size="sm" :icon="Check">Accepter</Button>
-                <Button @click="cancelOrDeclineRequest" variant="danger" size="sm" :icon="X">Refuser</Button>
-              </template>
+              <div v-if="!isMyProfile && relationshipStatus === 'PENDING_RECEIVED'" class="flex gap-2 w-full sm:w-auto">
+                <Button @click="acceptRequest" variant="primary" size="sm" :icon="Check" class="flex-1 sm:flex-initial">Accepter</Button>
+                <Button @click="cancelOrDeclineRequest" variant="danger" size="sm" :icon="X" class="flex-1 sm:flex-initial">Refuser</Button>
+              </div>
 
               <!-- Already friends: chat + remove -->
-              <template v-if="!isMyProfile && relationshipStatus === 'ACCEPTED'">
-                <Button @click="router.push(`/conversations/${targetUserId}`)" variant="secondary" size="sm" :icon="MessageSquare">Tchater</Button>
-                <Button @click="removeFriend" variant="danger" size="sm" :icon="UserMinus">Retirer</Button>
-              </template>
+              <div v-if="!isMyProfile && relationshipStatus === 'ACCEPTED'" class="flex gap-2 w-full sm:w-auto">
+                <Button @click="router.push(`/conversations/${targetUserId}`)" variant="secondary" size="sm" :icon="MessageSquare" class="flex-1 sm:flex-initial">Tchater</Button>
+                <Button @click="removeFriend" variant="danger" size="sm" :icon="UserMinus" class="flex-1 sm:flex-initial">Retirer</Button>
+              </div>
             </div>
           </div>
 
@@ -513,7 +516,7 @@ function getMmrRank(mmr: number) {
 
               <!-- Default avatars grid -->
               <div v-if="avatarTab === 'defaults'">
-                <div class="grid grid-cols-6 gap-3">
+                <div class="grid grid-cols-3 sm:grid-cols-6 gap-3">
                   <button v-for="avatar in defaultAvatars" :key="avatar.url"
                     @click="applyDefaultAvatar(avatar.url)"
                     class="group relative overflow-hidden transition-all hover:scale-105 cursor-pointer rounded-xl"
@@ -592,7 +595,7 @@ function getMmrRank(mmr: number) {
             <router-link to="/leaderboard" class="text-primary hover:underline font-bold ml-1">Voir le classement</router-link> pour en ajouter !
           </div>
           
-          <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div v-for="friend in friends" :key="friend.id"
                  @click="router.push(`/profile/${friend.id}`)"
                  class="rounded-xl p-4 flex items-center gap-3 cursor-pointer hover:bg-white/5 transition-all group"

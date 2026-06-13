@@ -71,21 +71,32 @@ onMounted(async () => {
         </div>
       </div>
       <div class="flex gap-3">
+        <!-- Actualiser (Desktop / Tablet) -->
         <Button
           @click="gameStore.fetchRooms()"
           variant="secondary"
           :icon="RotateCw"
           size="md"
+          class="hidden sm:inline-flex"
         >
           Actualiser
         </Button>
+        <!-- Actualiser (Mobile - icon only) -->
+        <Button
+          @click="gameStore.fetchRooms()"
+          variant="secondary"
+          :icon="RotateCw"
+          size="md"
+          class="sm:hidden"
+        />
         <Button
           @click="showSettings = true"
           variant="primary"
           :icon="Plus"
           size="md"
         >
-          Créer une partie
+          <span class="hidden sm:inline">Créer une partie</span>
+          <span class="sm:hidden">Créer</span>
         </Button>
       </div>
     </div>
@@ -189,19 +200,19 @@ onMounted(async () => {
         <h3 class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-300 font-cinzel">Rejoindre une partie par code</h3>
         <p class="text-[11px] text-slate-500 mt-1.5 tracking-wide leading-relaxed font-medium">Entrez le code secret d'une partie pour la rejoindre directement.</p>
       </div>
-      <div class="flex gap-4">
+      <div class="flex flex-col sm:flex-row gap-3">
         <input
           v-model="joinRoomId"
           placeholder="Code de partie (ex: AB12)"
           maxlength="4"
-          class="flex-1 rounded-xl px-4 py-3 text-sm outline-none uppercase font-medium placeholder-slate-600 tracking-wide bg-[#090d14] border border-white/5 focus:border-primary text-slate-100 transition-all duration-200"
+          class="w-full sm:w-60 sm:min-w-[200px] rounded-xl px-4 py-3 text-sm outline-none uppercase font-medium placeholder-slate-600 tracking-wide bg-[#090d14] border border-white/5 focus:border-primary text-slate-100 transition-all duration-200"
         />
         <Button
           @click="gameStore.joinGame(joinRoomId.toUpperCase())"
           :disabled="joinRoomId.length < 4"
           variant="primary"
           size="md"
-          class="px-8"
+          class="w-full sm:w-auto px-8"
         >
           Rejoindre
         </Button>
@@ -230,40 +241,47 @@ onMounted(async () => {
       <div
         v-for="room in gameStore.lobbyRooms"
         :key="room.roomId"
-        class="rounded-2xl px-5 py-4 flex items-center gap-6 bg-background-2 border border-primary/30 transition-all hover:border-primary/55"
+        class="rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 bg-background-2 border border-primary/30 transition-all hover:border-primary/55"
       >
         <!-- Left Section: Spade Emblem & Room Metadata -->
-        <div class="flex items-center gap-4 flex-shrink-0">
+        <div class="flex items-center gap-4 w-full sm:w-auto">
           <!-- Circular Gold Spade Suit Icon -->
-          <div class="w-12 h-12 rounded-full border border-primary flex items-center justify-center bg-primary/5 flex-shrink-0">
-            <Spade class="w-6 h-6 text-primary fill-primary" />
+          <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-primary flex items-center justify-center bg-primary/5 flex-shrink-0">
+            <Spade class="w-5 h-5 sm:w-6 sm:h-6 text-primary fill-primary" />
           </div>
-          <div class="space-y-2">
-            <!-- Room code: WHITE (not gold) -->
-            <div class="text-xl font-bold text-white font-cinzel tracking-wider leading-none">
-              {{ (room.metadata as any)?.code || (room as any).code || room.roomId.slice(0,4).toUpperCase() }}
+          <div class="space-y-1 sm:space-y-2 flex-1 sm:flex-initial">
+            <div class="flex items-center justify-between sm:justify-start gap-2">
+              <!-- Room code: WHITE (not gold) -->
+              <div class="text-lg sm:text-xl font-bold text-white font-cinzel tracking-wider leading-none">
+                {{ (room.metadata as any)?.code || (room as any).code || room.roomId.slice(0,4).toUpperCase() }}
+              </div>
+              <!-- Creation Elapsed Time (only inline on mobile) -->
+              <div class="flex sm:hidden items-center gap-1 text-[10px] font-medium text-slate-500">
+                <span class="w-1 h-1 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                <span>{{ getElapsedTime((room.metadata as any)?.createdAt ?? (room as any).createdAt) }}</span>
+              </div>
             </div>
             <!-- Badges row -->
-            <div class="flex items-center gap-2">
-              <div class="flex items-center gap-1 px-2 py-0.5 rounded border border-white/10 bg-white/[0.03] text-[11px] font-medium text-slate-400">
+            <div class="flex items-center flex-wrap gap-2">
+              <div class="flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/10 bg-white/[0.03] text-[10px] sm:text-[11px] font-medium text-slate-400">
                 <User class="w-3 h-3 flex-shrink-0" />
                 <span>{{ room.clients }} / {{ room.maxClients }} joueurs</span>
               </div>
-              <div class="flex items-center gap-1 px-2 py-0.5 rounded border border-white/10 bg-white/[0.03] text-[11px] font-medium text-slate-400">
+              <div class="flex items-center gap-1 px-1.5 py-0.5 rounded border border-white/10 bg-white/[0.03] text-[10px] sm:text-[11px] font-medium text-slate-400">
                 <LayoutGrid class="w-3 h-3 flex-shrink-0" />
                 <span>Partie classique</span>
               </div>
             </div>
-            <!-- Creation Elapsed Time -->
-            <div class="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+            <!-- Creation Elapsed Time (desktop/tablet only) -->
+            <div class="hidden sm:flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
               <span>Créée il y a {{ getElapsedTime((room.metadata as any)?.createdAt ?? (room as any).createdAt) }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Center Section: Horizontal Player Slots -->
-        <div class="flex-1 flex items-start gap-4 overflow-hidden">
+        <!-- Center Section: Horizontal Player Slots (hidden on mobile phone screens) -->
+        <div class="hidden sm:flex flex-1 items-start gap-3 sm:gap-4 overflow-hidden">
           <div
             v-for="i in room.maxClients"
             :key="i"
@@ -275,17 +293,17 @@ onMounted(async () => {
                 <!-- Crown above host -->
                 <Crown
                   v-if="getRoomPlayers(room)[i - 1].isHost"
-                  class="absolute -top-4 left-1/2 -translate-x-1/2 w-4 h-4 text-primary fill-primary"
+                  class="absolute -top-3.5 left-1/2 -translate-x-1/2 w-3.5 h-3.5 text-primary fill-primary"
                 />
                 <!-- Avatar circle with gold border for host, muted for others -->
                 <div
-                  class="w-12 h-12 rounded-full flex items-center justify-center"
+                  class="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center"
                   :class="getRoomPlayers(room)[i - 1].isHost
                     ? 'border-2 border-primary bg-[#1c1a10]'
                     : 'border border-slate-700/60 bg-[#161620]'"
                 >
                   <span
-                    class="text-sm font-bold font-cinzel"
+                    class="text-xs sm:text-sm font-bold font-cinzel"
                     :class="getRoomPlayers(room)[i - 1].isHost ? 'text-primary' : 'text-slate-300'"
                   >
                     {{ (getRoomPlayers(room)[i - 1].username || '?').slice(0, 2).toUpperCase() }}
@@ -293,36 +311,38 @@ onMounted(async () => {
                 </div>
               </div>
               <!-- Username -->
-              <span class="text-[11px] font-medium text-slate-300 max-w-[52px] truncate text-center leading-none">
+              <span class="text-[10px] sm:text-[11px] font-medium text-slate-300 max-w-[44px] sm:max-w-[52px] truncate text-center leading-none">
                 {{ getRoomPlayers(room)[i - 1].username }}
               </span>
               <!-- Hôte label -->
-              <span v-if="getRoomPlayers(room)[i - 1].isHost" class="text-[10px] font-semibold text-primary leading-none">
+              <span v-if="getRoomPlayers(room)[i - 1].isHost" class="text-[9px] sm:text-[10px] font-semibold text-primary leading-none">
                 Hôte
               </span>
             </template>
 
             <!-- Empty Slot -->
             <template v-else>
-              <div class="w-12 h-12 rounded-full border border-slate-700/40 bg-[#13131e] flex items-center justify-center">
-                <User class="w-5 h-5 text-slate-600" />
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-slate-700/40 bg-[#13131e] flex items-center justify-center">
+                <User class="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
               </div>
-              <span class="text-[11px] font-medium text-slate-500 text-center leading-none">En attente</span>
+              <span class="text-[10px] sm:text-[11px] font-medium text-slate-500 text-center leading-none">En attente</span>
             </template>
           </div>
         </div>
 
         <!-- Right Section: Join Button (Button component) -->
-        <Button
-          @click="gameStore.joinGame(room.roomId)"
-          variant="primary"
-          size="md"
-          :icon="ChevronRight"
-          icon-position="right"
-          class="flex-shrink-0"
-        >
-          Rejoindre
-        </Button>
+        <div class="w-full sm:w-auto flex-shrink-0">
+          <Button
+            @click="gameStore.joinGame(room.roomId)"
+            variant="primary"
+            size="md"
+            :icon="ChevronRight"
+            icon-position="right"
+            class="w-full sm:w-auto"
+          >
+            Rejoindre
+          </Button>
+        </div>
       </div>
     </div>
   </div>

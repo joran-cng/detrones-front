@@ -13,7 +13,7 @@ const gameStore = useGameStore()
   </div>
 
   <!-- Lobby -->
-  <div v-else class="px-8 py-10">
+  <div v-else class="px-4 py-6 sm:px-8 sm:py-10">
     <div class="w-full">
       <Lobby />
     </div>

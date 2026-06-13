@@ -120,17 +120,17 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="px-8 py-10">
+  <div class="px-4 py-6 sm:px-8 sm:py-10">
     <div class="w-full max-w-3xl mx-auto">
 
       <!-- Header -->
-      <div class="flex items-center gap-3 mb-8">
+      <div class="flex items-center gap-3 mb-6 sm:mb-8 flex-wrap">
         <div class="w-10 h-10 rounded-xl flex items-center justify-center" style="background: rgba(155,113,52,0.15); border: 1px solid rgba(155,113,52,0.25);">
           <Users class="w-5 h-5" style="color: #b8935c;" />
         </div>
         <div>
-          <h1 class="text-2xl font-black text-slate-100">Amis</h1>
-          <p class="text-xs font-bold uppercase tracking-widest" style="color: #64748b;">Gérer vos relations</p>
+          <h1 class="text-xl sm:text-2xl font-black text-slate-100">Amis</h1>
+          <p class="text-[10px] sm:text-xs font-bold uppercase tracking-widest" style="color: #64748b;">Gérer vos relations</p>
         </div>
         <!-- Badge demandes reçues -->
         <div v-if="receivedRequests.length > 0"
@@ -145,21 +145,22 @@ onUnmounted(() => {
       <div class="flex gap-1 p-1 rounded-2xl mb-6" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
         <button
           v-for="tab in [
-            { key: 'friends', label: 'Mes amis', icon: UserCheck, count: friends.length },
-            { key: 'received', label: 'Reçues', icon: Bell, count: receivedRequests.length, highlight: receivedRequests.length > 0 },
-            { key: 'sent', label: 'Envoyées', icon: Send, count: sentRequests.length },
+            { key: 'friends', label: 'Mes amis', labelMobile: 'Amis', icon: UserCheck, count: friends.length },
+            { key: 'received', label: 'Reçues', labelMobile: 'Reçues', icon: Bell, count: receivedRequests.length, highlight: receivedRequests.length > 0 },
+            { key: 'sent', label: 'Envoyées', labelMobile: 'Envoyées', icon: Send, count: sentRequests.length },
           ]"
           :key="tab.key"
           @click="activeTab = tab.key as Tab"
-          class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all"
+          class="flex-1 flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all"
           :style="activeTab === tab.key
             ? 'background: rgba(155,113,52,0.2); color: #fbbf24; border: 1px solid rgba(155,113,52,0.4);'
             : 'color: #64748b; border: 1px solid transparent;'"
         >
-          <component :is="tab.icon" class="w-4 h-4" />
-          <span>{{ tab.label }}</span>
+          <component :is="tab.icon" class="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+          <span class="hidden sm:inline">{{ tab.label }}</span>
+          <span class="sm:hidden">{{ tab.labelMobile }}</span>
           <span v-if="tab.count > 0"
-            class="text-xs px-1.5 py-0.5 rounded-full font-mono min-w-[20px] text-center"
+            class="text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full font-mono min-w-[18px] sm:min-w-[20px] text-center"
             :style="tab.highlight
               ? 'background: rgba(251,191,36,0.2); color: #fbbf24;'
               : 'background: rgba(255,255,255,0.08); color: #94a3b8;'"

@@ -31,7 +31,7 @@ const themeOverrides = {
       <!-- Auth App Layout with Sidebar -->
       <div v-if="showSidebar" class="flex h-screen bg-background-1 text-white overflow-hidden">
         <Sidebar />
-        <main class="flex-1 ml-64 h-full relative overflow-y-auto overflow-x-hidden" id="main-content">
+        <main class="flex-1 ml-0 lg:ml-64 pb-16 lg:pb-0 h-full relative overflow-y-auto overflow-x-hidden" id="main-content">
           <router-view class="relative z-10" />
         </main>
       </div>
