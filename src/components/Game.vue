@@ -36,6 +36,8 @@ const gameStore = useGameStore()
 const showHelpModal = ref(false)
 const activeHelpTab = ref('rules')
 const showChat = ref(false)
+const showLeaveConfirmModal = ref(false)
+const showStartConfirmModal = ref(false)
 
 // Track unread messages from OTHER players only (not my own messages)
 const unreadCount = ref(0)
@@ -277,6 +279,11 @@ function passTurn() {
 
 function startGame() {
   gameStore.room?.send('start_game')
+}
+
+function confirmStartGame() {
+  gameStore.room?.send('start_game')
+  showStartConfirmModal.value = false
 }
 
 function getSuitSymbol(suit: string) {
@@ -538,19 +545,43 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
         <span data-testid="room-code" class="sr-only">{{ gameStore.currentRoomId }}</span>
         <!-- Row 1: Buttons -->
         <div class="flex items-center justify-between">
-          <!-- Left: Help button -->
-          <div class="flex items-center gap-2">
+          <!-- Left: Help button & Room Info (Desktop only) -->
+          <div class="flex items-center gap-4">
             <Button
               @click="showHelpModal = true"
               variant="secondary"
               size="md"
               :icon="HelpCircle"
             />
+            <!-- Room info badges — desktop only, shown next to Help -->
+            <div class="hidden lg:flex items-center gap-3">
+              <!-- Room Code Badge -->
+              <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold backdrop-blur-md"
+                style="background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.08); color: #cbd5e1;">
+                <Hash class="w-3 h-3 text-primary-light" />
+                <span>Code:</span>
+                <span class="font-mono font-bold text-white tracking-wider uppercase">{{ gameStore.currentRoomId }}</span>
+              </div>
+              <!-- Player Count Badge -->
+              <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold backdrop-blur-md"
+                style="background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.08); color: #cbd5e1;">
+                <Users class="w-3 h-3 text-primary-light" />
+                <span>Joueurs:</span>
+                <span class="font-bold text-white">{{ players.length }}</span>
+              </div>
+              <!-- Spectator badge -->
+              <div v-if="amISpectator"
+                class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold animate-pulse"
+                style="background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.08);">
+                <Eye class="w-3 h-3 text-slate-400" />
+                <span>Spec.</span>
+              </div>
+            </div>
           </div>
           <!-- Right: Action buttons -->
           <div class="flex gap-2 items-center">
             <Button v-if="gameStore.isHost && (!phase || phase === 'LOBBY')"
-              @click="startGame"
+              @click="showStartConfirmModal = true"
               variant="primary"
               size="md"
               :icon="Play"
@@ -563,7 +594,7 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
               :icon="MessageSquare"
               :badge="unreadCount > 0 ? unreadCount : false"
             />
-            <Button @click="gameStore.leaveGame"
+            <Button @click="showLeaveConfirmModal = true"
               variant="danger"
               size="md"
               :icon="LogOut"
@@ -1000,7 +1031,7 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
 
     <!-- Modale de Fin de Partie (RESULTS) -->
     <div v-if="phase === 'RESULTS'"
-      class="absolute flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4">
+      class="fixed inset-0 flex items-center justify-center z-[100] bg-black/80 backdrop-blur-sm p-4">
       <div class="w-full max-w-md rounded-2xl shadow-2xl flex flex-col overflow-hidden"
         style="background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%); border: 1px solid rgba(255,255,255,0.1);">
         
@@ -1051,7 +1082,7 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
     </div>
 
     <!-- Modale d'Aide (Règles & Paramètres) -->
-    <div v-if="showHelpModal" class="absolute flex items-center justify-center z-50 bg-black/80 backdrop-blur-sm p-4" @click.self="showHelpModal = false">
+    <div v-if="showHelpModal" class="fixed inset-0 flex items-center justify-center z-[100] bg-black/80 backdrop-blur-sm p-4" @click.self="showHelpModal = false">
       <div class="w-full max-w-lg rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[85vh]" style="background: #151525; border: 1px solid rgba(255,255,255,0.06);">
         <!-- Onglets -->
         <div class="border-b border-white/10" style="background: rgba(0,0,0,0.2);">
@@ -1136,6 +1167,69 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
         <div class="p-4 border-t border-white/10 flex justify-end">
           <Button @click="showHelpModal = false" variant="secondary" size="md">
             Fermer
+          </Button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modale de Confirmation pour Quitter la Partie -->
+    <div v-if="showLeaveConfirmModal" class="fixed inset-0 flex items-center justify-center z-[100] bg-black/80 backdrop-blur-sm p-4" @click.self="showLeaveConfirmModal = false">
+      <div class="w-full max-w-sm rounded-2xl shadow-2xl flex flex-col overflow-hidden" style="background: #151525; border: 1px solid rgba(255,255,255,0.06);">
+        <div class="p-6 text-center border-b border-white/10">
+          <div class="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-3">
+            <LogOut class="w-6 h-6 text-red-500" />
+          </div>
+          <h3 class="text-lg font-bold text-slate-100 font-cinzel">Quitter la partie ?</h3>
+          <p class="text-xs text-slate-400 mt-2">Es-tu sûr de vouloir quitter le salon ? Ton score et ta session en cours seront perdus.</p>
+        </div>
+        <div class="p-4 bg-black/20 flex gap-3">
+          <Button @click="showLeaveConfirmModal = false" variant="secondary" size="md" class="flex-1">
+            Annuler
+          </Button>
+          <Button @click="gameStore.leaveGame(); showLeaveConfirmModal = false;" variant="danger" size="md" class="flex-1">
+            Quitter
+          </Button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modale de Confirmation pour Lancer la Partie -->
+    <div v-if="showStartConfirmModal" class="fixed inset-0 flex items-center justify-center z-[100] bg-black/80 backdrop-blur-sm p-4" @click.self="showStartConfirmModal = false">
+      <div class="w-full max-w-md rounded-2xl shadow-2xl flex flex-col overflow-hidden" style="background: #151525; border: 1px solid rgba(255,255,255,0.06);">
+        <div class="p-6 border-b border-white/10">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Play class="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-slate-100 font-cinzel">Lancer la partie ?</h3>
+              <p class="text-xs text-slate-400">Confirmation du démarrage du salon</p>
+            </div>
+          </div>
+          
+          <!-- Infos des joueurs -->
+          <div class="space-y-3">
+            <div class="flex justify-between items-center text-xs font-semibold text-slate-400 uppercase tracking-wider pb-1 border-b border-white/5">
+              <span>Joueurs connectés</span>
+              <span class="text-primary font-bold">{{ players.length }} / {{ gameStore.gameConfig?.maxPlayers || 7 }}</span>
+            </div>
+            <div class="flex flex-wrap gap-2 max-h-40 overflow-y-auto py-1">
+              <div v-for="player in players" :key="player.id"
+                class="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold"
+                style="background: rgba(255, 255, 255, 0.02); border-color: rgba(255, 255, 255, 0.06); color: #cbd5e1;">
+                <span class="w-1.5 h-1.5 rounded-full" :class="player.isHost ? 'bg-amber-400' : 'bg-emerald-500'"></span>
+                <span>{{ player.username }}</span>
+                <Crown v-if="player.isHost" class="w-3 h-3 text-amber-400 ml-0.5" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="p-4 bg-black/20 flex gap-3">
+          <Button @click="showStartConfirmModal = false" variant="secondary" size="md" class="flex-1">
+            Annuler
+          </Button>
+          <Button @click="confirmStartGame" variant="primary" size="md" class="flex-1">
+            Lancer
           </Button>
         </div>
       </div>

@@ -102,81 +102,83 @@ onMounted(async () => {
     </div>
 
     <!-- Modal Paramètres de Partie -->
-    <div v-if="showSettings" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px);">
-      <div class="rounded-2xl p-6 w-full max-w-md border" style="background: #151525; border-color: rgba(255,255,255,0.06);">
-        <div class="flex justify-between items-center mb-6">
-          <div class="flex items-center gap-2 text-primary font-bold">
-            <Sliders class="w-4 h-4" />
-            <h3 class="text-lg">Paramètres de la partie</h3>
+    <Teleport to="body">
+      <div v-if="showSettings" class="fixed inset-0 z-[100] flex items-center justify-center p-4" style="background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px);">
+        <div class="rounded-2xl p-6 w-full max-w-md border" style="background: #151525; border-color: rgba(255,255,255,0.06);">
+          <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center gap-2 text-primary font-bold">
+              <Sliders class="w-4 h-4" />
+              <h3 class="text-lg">Paramètres de la partie</h3>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              class="!p-1 text-slate-400 hover:text-white"
+              @click="showSettings = false"
+            >
+              <X class="w-4 h-4" />
+            </Button>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            class="!p-1 text-slate-400 hover:text-white"
-            @click="showSettings = false"
+
+          <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            <!-- Nombre de joueurs -->
+            <div class="flex justify-between items-center py-1">
+              <span class="text-sm font-bold text-slate-300">Joueurs Max</span>
+              <select v-model.number="configOptions.maxPlayers" class="rounded-lg px-3 py-2 text-sm font-semibold" style="background: rgba(255,255,255,0.04); color: #f1f5f9; border: 1px solid rgba(255,255,255,0.08); outline: none;">
+                <option :value="3" class="bg-[#151525]">3 Joueurs</option>
+                <option :value="4" class="bg-[#151525]">4 Joueurs</option>
+                <option :value="5" class="bg-[#151525]">5 Joueurs</option>
+                <option :value="6" class="bg-[#151525]">6 Joueurs</option>
+                <option :value="7" class="bg-[#151525]">7 Joueurs</option>
+              </select>
+            </div>
+
+            <!-- Variantes -->
+            <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
+              <input type="checkbox" v-model="configOptions.enableSequences" class="w-4 h-4 rounded accent-primary">
+              <div>
+                <div class="text-sm font-bold text-slate-300">Suites autorisées</div>
+                <div class="text-xs text-slate-500 mt-0.5">Permet de jouer des suites (ex: 3,4,5)</div>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
+              <input type="checkbox" v-model="configOptions.enableRevolution" class="w-4 h-4 rounded accent-primary">
+              <div>
+                <div class="text-sm font-bold text-slate-300">Révolution</div>
+                <div class="text-xs text-slate-500 mt-0.5">Un carré inverse l'ordre des cartes</div>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" :style="{ opacity: configOptions.enableRevolution ? 1 : 0.5 }" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
+              <input type="checkbox" v-model="configOptions.revolutionResetsTrick" :disabled="!configOptions.enableRevolution" class="w-4 h-4 rounded accent-primary">
+              <div>
+                <div class="text-sm font-bold text-slate-300">Révolution ramasse</div>
+                <div class="text-xs text-slate-500 mt-0.5">Un carré ferme également le pli en cours</div>
+              </div>
+            </label>
+
+            <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
+              <input type="checkbox" v-model="configOptions.exchangeCards" class="w-4 h-4 rounded accent-primary">
+              <div>
+                <div class="text-sm font-bold text-slate-300">Échange de cartes</div>
+                <div class="text-xs text-slate-500 mt-0.5">Président ↔ TDC en début de manche</div>
+              </div>
+            </label>
+          </div>
+
+          <Button
+            @click="handleCreateGame"
+            variant="primary"
+            full-width
+            size="lg"
+            class="mt-6"
           >
-            <X class="w-4 h-4" />
+            Valider et Créer
           </Button>
         </div>
-
-        <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-          <!-- Nombre de joueurs -->
-          <div class="flex justify-between items-center py-1">
-            <span class="text-sm font-bold text-slate-300">Joueurs Max</span>
-            <select v-model.number="configOptions.maxPlayers" class="rounded-lg px-3 py-2 text-sm font-semibold" style="background: rgba(255,255,255,0.04); color: #f1f5f9; border: 1px solid rgba(255,255,255,0.08); outline: none;">
-              <option :value="3" class="bg-[#151525]">3 Joueurs</option>
-              <option :value="4" class="bg-[#151525]">4 Joueurs</option>
-              <option :value="5" class="bg-[#151525]">5 Joueurs</option>
-              <option :value="6" class="bg-[#151525]">6 Joueurs</option>
-              <option :value="7" class="bg-[#151525]">7 Joueurs</option>
-            </select>
-          </div>
-
-          <!-- Variantes -->
-          <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
-            <input type="checkbox" v-model="configOptions.enableSequences" class="w-4 h-4 rounded accent-primary">
-            <div>
-              <div class="text-sm font-bold text-slate-300">Suites autorisées</div>
-              <div class="text-xs text-slate-500 mt-0.5">Permet de jouer des suites (ex: 3,4,5)</div>
-            </div>
-          </label>
-
-          <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
-            <input type="checkbox" v-model="configOptions.enableRevolution" class="w-4 h-4 rounded accent-primary">
-            <div>
-              <div class="text-sm font-bold text-slate-300">Révolution</div>
-              <div class="text-xs text-slate-500 mt-0.5">Un carré inverse l'ordre des cartes</div>
-            </div>
-          </label>
-
-          <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" :style="{ opacity: configOptions.enableRevolution ? 1 : 0.5 }" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
-            <input type="checkbox" v-model="configOptions.revolutionResetsTrick" :disabled="!configOptions.enableRevolution" class="w-4 h-4 rounded accent-primary">
-            <div>
-              <div class="text-sm font-bold text-slate-300">Révolution ramasse</div>
-              <div class="text-xs text-slate-500 mt-0.5">Un carré ferme également le pli en cours</div>
-            </div>
-          </label>
-
-          <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
-            <input type="checkbox" v-model="configOptions.exchangeCards" class="w-4 h-4 rounded accent-primary">
-            <div>
-              <div class="text-sm font-bold text-slate-300">Échange de cartes</div>
-              <div class="text-xs text-slate-500 mt-0.5">Président ↔ TDC en début de manche</div>
-            </div>
-          </label>
-        </div>
-
-        <Button
-          @click="handleCreateGame"
-          variant="primary"
-          full-width
-          size="lg"
-          class="mt-6"
-        >
-          Valider et Créer
-        </Button>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Code partageable après création -->
     <div v-if="gameStore.currentRoomId"

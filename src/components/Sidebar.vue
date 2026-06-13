@@ -8,6 +8,7 @@ import * as Icons from '@lucide/vue'
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const showLogoutConfirmModal = ref(false)
 
 const currentPath = computed(() => route.path)
 
@@ -209,7 +210,7 @@ onUnmounted(() => {
         full-width
         size="md"
         class="!justify-start"
-        @click="handleLogout"
+        @click="showLogoutConfirmModal = true"
       >
         Déconnexion
       </Button>
@@ -268,4 +269,27 @@ onUnmounted(() => {
       <span class="text-[8px] sm:text-[9px] font-bold tracking-wider uppercase font-cinzel text-center">Mon profil</span>
     </button>
   </div>
+
+  <!-- Modale de Confirmation pour la Déconnexion -->
+  <Teleport to="body">
+    <div v-if="showLogoutConfirmModal" class="fixed inset-0 flex items-center justify-center z-[100] bg-black/80 backdrop-blur-sm p-4" @click.self="showLogoutConfirmModal = false">
+      <div class="w-full max-w-sm rounded-2xl shadow-2xl flex flex-col overflow-hidden" style="background: #151525; border: 1px solid rgba(255,255,255,0.06);">
+        <div class="p-6 text-center border-b border-white/10">
+          <div class="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-3">
+            <component :is="Icons.LogOut" class="w-6 h-6 text-red-500" />
+          </div>
+          <h3 class="text-lg font-bold text-slate-100 font-cinzel">Se déconnecter ?</h3>
+          <p class="text-xs text-slate-400 mt-2">Es-tu sûr de vouloir te déconnecter de ton compte ? Tu devras ressaisir tes identifiants pour te reconnecter.</p>
+        </div>
+        <div class="p-4 bg-black/20 flex gap-3">
+          <Button @click="showLogoutConfirmModal = false" variant="secondary" size="md" class="flex-1">
+            Annuler
+          </Button>
+          <Button @click="handleLogout(); showLogoutConfirmModal = false;" variant="danger" size="md" class="flex-1">
+            Se déconnecter
+          </Button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
