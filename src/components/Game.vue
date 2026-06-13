@@ -424,7 +424,7 @@ const currentEventStyle = computed(() => {
             style="background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.08); color: #cbd5e1;">
             <Hash class="w-3.5 h-3.5 text-primary-light" />
             <span>Code:</span>
-            <span class="font-mono font-bold text-white tracking-wider uppercase">{{ gameStore.currentRoomId }}</span>
+            <span class="font-mono font-bold text-white tracking-wider uppercase" data-testid="room-code">{{ gameStore.currentRoomId }}</span>
           </div>
 
           <!-- Player Count Badge -->

@@ -40,7 +40,7 @@ test('successful registration, lobby redirection, and game creation', async ({ p
   await expect(codeLabel).toBeVisible({ timeout: 15000 });
 
   // 8. S'assurer que le code de partie s'affiche (un texte majuscule de 4 lettres)
-  const codeContainer = page.locator('span.font-mono');
+  const codeContainer = page.getByTestId('room-code');
   await expect(codeContainer).toBeVisible();
   const code = await codeContainer.textContent();
   expect(code?.trim().length).toBe(4);
