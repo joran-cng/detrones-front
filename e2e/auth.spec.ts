@@ -35,12 +35,12 @@ test('successful registration, lobby redirection, and game creation', async ({ p
   await expect(validateBtn).toBeVisible();
   await validateBtn.click();
 
-  // 7. Vérifier que la partie a bien été créée et redirigée vers l'écran de jeu (titre "Président")
-  const gameHeader = page.locator('h1', { hasText: 'Président' });
-  await expect(gameHeader).toBeVisible({ timeout: 15000 });
+  // 7. Vérifier que la partie a bien été créée et redirigée vers l'écran de jeu (présence du label "Code:")
+  const codeLabel = page.locator('span', { hasText: 'Code:' });
+  await expect(codeLabel).toBeVisible({ timeout: 15000 });
 
   // 8. S'assurer que le code de partie s'affiche (un texte majuscule de 4 lettres)
-  const codeContainer = page.locator('.font-mono', { hasText: 'Code:' }).locator('span');
+  const codeContainer = page.locator('span.font-mono');
   await expect(codeContainer).toBeVisible();
   const code = await codeContainer.textContent();
   expect(code?.trim().length).toBe(4);
