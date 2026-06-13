@@ -108,6 +108,11 @@ jobs:
           path: backend-repo
           token: ${{ secrets.GH_PAT || github.token }}
 
+      - name: Stop pre-installed Postgres and Redis services
+        run: |
+          sudo systemctl stop postgresql.service || true
+          sudo systemctl stop redis-server.service || true
+
       - name: Start Postgres & Redis (Docker Compose)
         working-directory: backend-repo
         run: docker compose up postgres redis -d
