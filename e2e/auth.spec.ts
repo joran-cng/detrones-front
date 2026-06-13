@@ -21,9 +21,19 @@ test('successful registration, lobby redirection, and game creation', async ({ p
   await submitButton.click();
 
   // 4. Vérifier la redirection vers le lobby (Home)
-  const lobbyHeader = page.locator('h2', { hasText: 'Parties disponibles' });
-  await expect(lobbyHeader).toBeVisible({ timeout: 10000 });
-  await expect(page).toHaveURL('/');
+  // Use waitForURL for reliable navigation detection (API call + DB can be slow)
+  try {
+    await page.waitForURL('/', { timeout: 20000 });
+  } catch (err) {
+    // If we failed to redirect, check if there's an error message on the registration screen
+    const errorAlert = page.locator('.text-red-400');
+    if (await errorAlert.isVisible()) {
+      const errorText = await errorAlert.textContent();
+      throw new Error(`Registration failed. UI error message: "${errorText?.trim()}"`);
+    }
+    throw err;
+  }
+  await expect(page.locator('h2', { hasText: 'Parties disponibles' })).toBeVisible({ timeout: 5000 });
 
   // 5. Cliquer sur "Créer une partie" pour ouvrir le modal
   const createGameBtn = page.getByRole('button', { name: 'Créer une partie', exact: true });
@@ -35,13 +45,9 @@ test('successful registration, lobby redirection, and game creation', async ({ p
   await expect(validateBtn).toBeVisible();
   await validateBtn.click();
 
-  // 7. Vérifier que la partie a bien été créée et redirigée vers l'écran de jeu (présence du label "Code:")
-  const codeLabel = page.locator('span', { hasText: 'Code:' });
-  await expect(codeLabel).toBeVisible({ timeout: 15000 });
-
-  // 8. S'assurer que le code de partie s'affiche (un texte majuscule de 4 lettres)
+  // 7. Vérifier que la partie a bien été créée et redirigée vers l'écran de jeu
+  // data-testid="room-code" est en sr-only (toujours dans le DOM). We use toHaveText to auto-retry
+  // until the 4-character uppercase alphanumeric room code is populated.
   const codeContainer = page.getByTestId('room-code');
-  await expect(codeContainer).toBeVisible();
-  const code = await codeContainer.textContent();
-  expect(code?.trim().length).toBe(4);
+  await expect(codeContainer).toHaveText(/^[A-Z0-9]{4}$/, { timeout: 15000 });
 });

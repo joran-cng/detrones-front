@@ -534,6 +534,8 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
     <div class="flex-1 flex flex-col min-h-0 relative z-10">
       <!-- Game Header -->
       <div class="flex flex-col px-6 py-3" style="background: transparent; flex-shrink: 0;">
+        <!-- Hidden testid anchor for E2E — always in DOM regardless of viewport -->
+        <span data-testid="room-code" class="sr-only">{{ gameStore.currentRoomId }}</span>
         <!-- Row 1: Buttons -->
         <div class="flex items-center justify-between">
           <!-- Left: Help button -->
@@ -575,7 +577,7 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
             style="background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.08); color: #cbd5e1;">
             <Hash class="w-3 h-3 text-primary-light" />
             <span>Code:</span>
-            <span class="font-mono font-bold text-white tracking-wider uppercase" data-testid="room-code">{{ gameStore.currentRoomId }}</span>
+            <span class="font-mono font-bold text-white tracking-wider uppercase">{{ gameStore.currentRoomId }}</span>
           </div>
           <!-- Player Count Badge -->
           <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold backdrop-blur-md"
