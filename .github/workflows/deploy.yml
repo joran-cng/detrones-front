@@ -123,7 +123,6 @@ jobs:
         run: pnpm --filter @president/back exec prisma db push
 
       - name: Install Playwright Browsers
-        working-directory: web
         run: npx playwright install chromium --with-deps
 
       - name: Run Playwright E2E Tests
@@ -134,7 +133,7 @@ jobs:
           pnpm run dev &
           echo "Waiting for backend API to respond on port 3000..."
           for i in {1..40}; do curl -s http://localhost:3000/api/health && break || sleep 1; done
-          cd ../web
+          cd ..
           pnpm run dev &
           echo "Waiting for frontend to respond on port 5173..."
           for i in {1..30}; do curl -s http://localhost:5173 && break || sleep 1; done

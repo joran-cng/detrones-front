@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import AppInput from '../components/Input.vue'
+import Button from '../components/Button.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -15,6 +16,7 @@ const form = ref({
 })
 const loading = ref(false)
 const error = ref('')
+const usernameSuggestion = ref('')
 
 // Field-level validation
 const passwordError = computed(() => {
@@ -38,8 +40,9 @@ const isValid = computed(() =>
 
 async function handleRegister() {
   if (!isValid.value) return
-  error.value = ''
   loading.value = true
+  error.value = ''
+  usernameSuggestion.value = ''
   try {
     const { confirmPassword, ...payload } = form.value
     const res = await fetch('/api/auth/register', {
@@ -48,7 +51,21 @@ async function handleRegister() {
       body: JSON.stringify(payload)
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.statusMessage || 'Échec de l\'inscription')
+    if (!res.ok) {
+      // Check for username suggestion
+      if (res.status === 409 && data.data?.suggestion) {
+        usernameSuggestion.value = data.data.suggestion
+        error.value = `Le pseudo "${form.value.username}" est déjà pris.`
+      } else {
+        const msg = data.statusMessage || ''
+        if (msg === 'Email already in use') {
+          error.value = 'Cette adresse email est déjà utilisée.'
+        } else {
+          error.value = msg || 'Erreur lors de la création du compte.'
+        }
+      }
+      return
+    }
     authStore.setAuth(data.token, data.user)
     router.push('/')
   } catch (e: any) {
@@ -57,11 +74,16 @@ async function handleRegister() {
     loading.value = false
   }
 }
+
+function useSuggestion() {
+  form.value.username = usernameSuggestion.value
+  usernameSuggestion.value = ''
+  error.value = ''
+}
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center px-4 py-8" style="background: #070c15;">
-
+  <div class="min-h-screen flex items-center justify-center px-4 py-16 relative overflow-hidden bg-background-1">
     <!-- Ambient glow -->
     <div class="fixed inset-0 pointer-events-none overflow-hidden">
       <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full opacity-[0.07]"
@@ -71,19 +93,28 @@ async function handleRegister() {
     </div>
 
     <div class="w-full max-w-[420px] relative z-10">
-
-      <!-- Logo / Branding -->
-      <div class="text-center mb-10">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl border border-primary/30 bg-primary/5 mb-5 shadow-[0_0_30px_rgba(155,113,52,0.12)]">
-          <img src="/logo.png" alt="Président" class="w-10 h-10 object-contain" />
+      <!-- Logo -->
+      <div class="text-center mb-8 flex flex-col items-center">
+        <div class="mb-3 flex justify-center">
+          <img 
+            src="/logo.png" 
+            alt="Président Logo" 
+            class="w-14 h-auto object-contain"
+          />
         </div>
-        <h1 class="text-2xl font-bold text-white font-cinzel tracking-widest uppercase">Président</h1>
-        <p class="text-sm text-slate-500 mt-1.5 font-medium">Le jeu de cartes en ligne</p>
+        <div>
+          <h1 class="font-extrabold text-3xl tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-primary-light via-primary to-primary-dark uppercase leading-none font-cinzel" style="filter: drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.45));">Président</h1>
+          <div class="flex items-center justify-center gap-2.5 mt-3 w-full">
+            <span class="h-[1px] w-5 bg-primary/50"></span>
+            <span class="text-[9px] font-bold text-primary-light tracking-[0.25em] uppercase">Online Arena</span>
+            <span class="h-[1px] w-5 bg-primary/50"></span>
+          </div>
+        </div>
       </div>
 
       <!-- Card -->
-      <div class="rounded-2xl p-8 border"
-           style="background: rgba(17,22,33,0.95); border-color: rgba(255,255,255,0.07); backdrop-filter: blur(16px);">
+      <div class="rounded-2xl p-8 border bg-background-2/95"
+           style="border-color: rgba(255, 255, 255, 0.08); backdrop-filter: blur(16px);">
 
         <h2 class="text-lg font-bold text-white mb-1">Créer un compte</h2>
         <p class="text-xs text-slate-500 mb-7">Rejoins la table et prouve qui est le vrai Président !</p>
@@ -131,12 +162,26 @@ async function handleRegister() {
 
           <!-- Error global -->
           <div v-if="error"
-               class="flex items-start gap-2.5 text-sm p-3.5 rounded-xl"
-               style="background: rgba(239,68,68,0.08); color: #f87171; border: 1px solid rgba(239,68,68,0.18);">
+               class="flex items-start gap-2.5 text-sm p-3.5 rounded-xl bg-red-500/5 border border-red-500/20 text-red-400">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
             </svg>
             {{ error }}
+          </div>
+
+          <!-- Username suggestion -->
+          <div v-if="usernameSuggestion"
+               class="flex items-center justify-between p-3 rounded-xl bg-primary/10 border border-primary/30">
+            <span class="text-sm text-primary-light">
+              💡 Essayez : <strong>{{ usernameSuggestion }}</strong>
+            </span>
+            <Button
+              @click="useSuggestion"
+              size="sm"
+              variant="secondary"
+            >
+              Utiliser
+            </Button>
           </div>
 
           <!-- Password match indicator -->
@@ -149,23 +194,17 @@ async function handleRegister() {
           </div>
 
           <!-- Submit -->
-          <button
+          <Button
             type="submit"
-            :disabled="loading || !isValid"
-            class="w-full py-3 rounded-xl font-bold text-sm transition-all duration-300 mt-2 relative overflow-hidden"
-            :class="loading || !isValid
-              ? 'bg-primary/30 text-primary/50 cursor-not-allowed'
-              : 'bg-gradient-to-r from-primary to-primary-light text-white hover:from-primary-light hover:to-primary shadow-lg shadow-primary/15 active:scale-[0.98] cursor-pointer'"
+            :loading="loading"
+            :disabled="!isValid"
+            variant="primary"
+            full-width
+            size="md"
+            class="mt-2"
           >
-            <span v-if="!loading">Créer mon compte</span>
-            <span v-else class="flex items-center justify-center gap-2">
-              <svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-              </svg>
-              Création…
-            </span>
-          </button>
+            Créer mon compte
+          </Button>
         </form>
       </div>
 

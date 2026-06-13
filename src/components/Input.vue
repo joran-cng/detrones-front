@@ -38,7 +38,7 @@ const resolvedType = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-1.5">
+  <div class="flex flex-col gap-1.5 w-full">
     <!-- Label -->
     <label
       :for="inputId"
@@ -46,7 +46,7 @@ const resolvedType = computed(() => {
       :class="isFocused ? 'text-slate-200' : 'text-slate-400'"
     >
       {{ label }}
-      <span v-if="required" class="text-primary ml-0.5">*</span>
+      <span v-if="required" class="text-rose-500 ml-0.5">*</span>
     </label>
 
     <!-- Input wrapper -->
@@ -65,7 +65,7 @@ const resolvedType = computed(() => {
           error
             ? 'bg-red-500/5 border border-red-500/40 focus:border-red-400'
             : isFocused
-              ? 'bg-white/[0.07] border border-primary/60 shadow-[0_0_0_3px_rgba(155,113,52,0.12)]'
+              ? 'bg-white/[0.07] border border-[#9b7134]/60 shadow-[0_0_0_3px_rgba(155,113,52,0.12)]'
               : 'bg-white/[0.04] border border-white/[0.08] hover:border-white/[0.14]'
         ]"
         @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
@@ -78,16 +78,16 @@ const resolvedType = computed(() => {
         v-if="type === 'password'"
         type="button"
         tabindex="-1"
-        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors duration-150 p-0.5"
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors duration-150 p-0.5 cursor-pointer"
         @click="showPassword = !showPassword"
       >
         <!-- Eye open -->
-        <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
           <circle cx="12" cy="12" r="3"/>
         </svg>
         <!-- Eye off -->
-        <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
           <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
           <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>

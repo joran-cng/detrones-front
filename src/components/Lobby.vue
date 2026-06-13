@@ -1,9 +1,54 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, reactive } from 'vue'
 import { useGameStore } from '../stores/game'
+import Button from './Button.vue'
+import { RotateCw, Plus, X, Check, ChevronRight, Gamepad2, Sliders, Club, Spade, User, LayoutGrid, Crown } from '@lucide/vue'
 
 const gameStore = useGameStore()
 const joinRoomId = ref('')
+const showSettings = ref(false)
+
+const configOptions = reactive({
+  minPlayers: 3,
+  maxPlayers: 7,
+  enableSequences: false,
+  enableRevolution: true,
+  revolutionResetsTrick: true,
+  exchangeCards: true,
+})
+
+const handleCreateGame = () => {
+  showSettings.value = false
+  gameStore.createGame(configOptions)
+}
+
+const getRoomPlayers = (room: any) => {
+  // Support both Colyseus lobby format (metadata.players) and REST API format (room.players)
+  const players = room.metadata?.players ?? room.players
+  if (players && Array.isArray(players) && players.length > 0) {
+    return players
+  }
+  return []
+}
+
+const getElapsedTime = (createdAt: number | undefined) => {
+  if (!createdAt) return 'à l\'instant'
+  const elapsedMs = Date.now() - createdAt
+  const elapsedSec = Math.floor(elapsedMs / 1000)
+  const elapsedMin = Math.floor(elapsedSec / 60)
+  const elapsedHrs = Math.floor(elapsedMin / 60)
+
+  if (elapsedSec < 60) {
+    return 'quelques secondes'
+  } else if (elapsedMin < 60) {
+    return `${elapsedMin} min`
+  } else if (elapsedHrs < 24) {
+    return `${elapsedHrs} h`
+  } else {
+    const days = Math.floor(elapsedHrs / 24)
+    return `${days} j`
+  }
+}
 
 onMounted(async () => {
   await gameStore.joinLobby()
@@ -14,93 +59,270 @@ onMounted(async () => {
   <div class="space-y-6">
 
     <!-- Header -->
-    <div class="flex justify-between items-center">
-      <div>
-        <h2 class="text-2xl font-bold" style="color: #f1f5f9;">Parties disponibles</h2>
-        <p class="text-sm mt-0.5" style="color: #64748b;">{{ gameStore.lobbyRooms.length }} room(s) active(s)</p>
+    <div class="flex justify-between items-center flex-wrap gap-4">
+      <div class="flex items-center gap-3">
+        <!-- Circular Gold Club Suit Icon -->
+        <div class="w-12 h-12 rounded-full border border-primary flex items-center justify-center bg-primary/5 shadow-[inset_0_1px_3px_rgba(155,113,52,0.2)] flex-shrink-0">
+          <Club class="w-6 h-6 text-primary fill-primary" />
+        </div>
+        <div>
+          <h2 class="text-xl tracking-wider text-slate-100 font-cinzel leading-tight uppercase">Parties disponibles</h2>
+          <p class="text-xs font-bold text-slate-500 mt-0.5 uppercase tracking-wider">{{ gameStore.lobbyRooms.length }} salon(s) actif(s)</p>
+        </div>
       </div>
-      <div class="flex gap-2">
-        <button
+      <div class="flex gap-3">
+        <Button
           @click="gameStore.fetchRooms()"
-          class="px-4 py-2.5 rounded-xl text-sm transition-all"
-          style="color: #64748b; border: 1px solid rgba(255,255,255,0.08); cursor: pointer;"
+          variant="secondary"
+          :icon="RotateCw"
+          size="md"
         >
-          🔄 Actualiser
-        </button>
-        <button
-          @click="gameStore.createGame"
-          class="px-5 py-2.5 rounded-xl font-semibold text-sm transition-all hover:opacity-90"
-          style="background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; cursor: pointer;"
+          Actualiser
+        </Button>
+        <Button
+          @click="showSettings = true"
+          variant="primary"
+          :icon="Plus"
+          size="md"
         >
-          + Créer une partie
-        </button>
+          Créer une partie
+        </Button>
+      </div>
+    </div>
+
+    <!-- Modal Paramètres de Partie -->
+    <div v-if="showSettings" class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px);">
+      <div class="rounded-2xl p-6 w-full max-w-md border" style="background: #151525; border-color: rgba(255,255,255,0.06);">
+        <div class="flex justify-between items-center mb-6">
+          <div class="flex items-center gap-2 text-primary font-bold">
+            <Sliders class="w-4 h-4" />
+            <h3 class="text-lg">Paramètres de la partie</h3>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            class="!p-1 text-slate-400 hover:text-white"
+            @click="showSettings = false"
+          >
+            <X class="w-4 h-4" />
+          </Button>
+        </div>
+
+        <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+          <!-- Nombre de joueurs -->
+          <div class="flex justify-between items-center py-1">
+            <span class="text-sm font-bold text-slate-300">Joueurs Max</span>
+            <select v-model.number="configOptions.maxPlayers" class="rounded-lg px-3 py-2 text-sm font-semibold" style="background: rgba(255,255,255,0.04); color: #f1f5f9; border: 1px solid rgba(255,255,255,0.08); outline: none;">
+              <option :value="3" class="bg-[#151525]">3 Joueurs</option>
+              <option :value="4" class="bg-[#151525]">4 Joueurs</option>
+              <option :value="5" class="bg-[#151525]">5 Joueurs</option>
+              <option :value="6" class="bg-[#151525]">6 Joueurs</option>
+              <option :value="7" class="bg-[#151525]">7 Joueurs</option>
+            </select>
+          </div>
+
+          <!-- Variantes -->
+          <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
+            <input type="checkbox" v-model="configOptions.enableSequences" class="w-4 h-4 rounded accent-primary">
+            <div>
+              <div class="text-sm font-bold text-slate-300">Suites autorisées</div>
+              <div class="text-xs text-slate-500 mt-0.5">Permet de jouer des suites (ex: 3,4,5)</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
+            <input type="checkbox" v-model="configOptions.enableRevolution" class="w-4 h-4 rounded accent-primary">
+            <div>
+              <div class="text-sm font-bold text-slate-300">Révolution</div>
+              <div class="text-xs text-slate-500 mt-0.5">Un carré inverse l'ordre des cartes</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" :style="{ opacity: configOptions.enableRevolution ? 1 : 0.5 }" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
+            <input type="checkbox" v-model="configOptions.revolutionResetsTrick" :disabled="!configOptions.enableRevolution" class="w-4 h-4 rounded accent-primary">
+            <div>
+              <div class="text-sm font-bold text-slate-300">Révolution ramasse</div>
+              <div class="text-xs text-slate-500 mt-0.5">Un carré ferme également le pli en cours</div>
+            </div>
+          </label>
+
+          <label class="flex items-center gap-3.5 cursor-pointer p-3 rounded-xl hover:bg-white/5 transition-all" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);">
+            <input type="checkbox" v-model="configOptions.exchangeCards" class="w-4 h-4 rounded accent-primary">
+            <div>
+              <div class="text-sm font-bold text-slate-300">Échange de cartes</div>
+              <div class="text-xs text-slate-500 mt-0.5">Président ↔ TDC en début de manche</div>
+            </div>
+          </label>
+        </div>
+
+        <Button
+          @click="handleCreateGame"
+          variant="primary"
+          full-width
+          size="lg"
+          class="mt-6"
+        >
+          Valider et Créer
+        </Button>
       </div>
     </div>
 
     <!-- Code partageable après création -->
     <div v-if="gameStore.currentRoomId"
       class="rounded-xl p-4 flex items-center justify-between"
-      style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);">
-      <div>
-        <p class="text-sm font-medium" style="color: #34d399;">✅ Partie créée !</p>
-        <p class="text-xs mt-0.5" style="color: #6ee7b7;">Partage ce code à ton ami :</p>
+      style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25);">
+      <div class="flex items-center gap-2">
+        <Check class="w-5 h-5 text-emerald-400" />
+        <div>
+          <p class="text-sm font-bold text-emerald-400">Partie créée !</p>
+          <p class="text-[10px] uppercase font-bold text-emerald-500/80 tracking-wider">Partage ce code à ton ami :</p>
+        </div>
       </div>
-      <div class="font-mono font-bold text-3xl tracking-widest select-all" style="color: #34d399;">
+      <div class="font-mono font-black text-3xl tracking-widest select-all text-emerald-400">
         {{ gameStore.currentRoomId }}
       </div>
     </div>
 
     <!-- Rejoindre par code -->
-    <div class="rounded-xl p-4" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
-      <p class="text-sm font-medium mb-3" style="color: #94a3b8;">Rejoindre par code</p>
-      <div class="flex gap-2">
+    <div class="rounded-2xl p-6 bg-background-2 border border-white/[0.04] space-y-4">
+      <div>
+        <h3 class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-300 font-cinzel">Rejoindre une partie par code</h3>
+        <p class="text-[11px] text-slate-500 mt-1.5 tracking-wide leading-relaxed font-medium">Entrez le code secret d'une partie pour la rejoindre directement.</p>
+      </div>
+      <div class="flex gap-4">
         <input
           v-model="joinRoomId"
-          placeholder="XXXX"
+          placeholder="Code de partie (ex: AB12)"
           maxlength="4"
-          class="flex-1 rounded-lg px-4 py-2.5 text-sm font-mono tracking-widest outline-none uppercase"
-          style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #f1f5f9;"
+          class="flex-1 rounded-xl px-4 py-3 text-sm outline-none uppercase font-medium placeholder-slate-600 tracking-wide bg-[#090d14] border border-white/5 focus:border-primary text-slate-100 transition-all duration-200"
         />
-        <button
+        <Button
           @click="gameStore.joinGame(joinRoomId.toUpperCase())"
           :disabled="joinRoomId.length < 4"
-          class="px-4 py-2.5 rounded-lg text-sm font-semibold transition-all"
-          style="background: #7c3aed; color: white; cursor: pointer;"
-          :style="joinRoomId.length < 4 ? 'opacity: 0.4; cursor: not-allowed;' : ''"
+          variant="primary"
+          size="md"
+          class="px-8"
         >
           Rejoindre
-        </button>
+        </Button>
       </div>
     </div>
 
-    <!-- Liste des rooms  -->
+    <!-- Liste des rooms -->
     <div v-if="gameStore.lobbyRooms.length === 0"
-      class="rounded-xl p-10 text-center"
-      style="background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.08);">
-      <div class="text-3xl mb-2">🃏</div>
-      <p style="color: #475569;">Aucune partie en cours. Crée-en une !</p>
+      class="rounded-2xl p-8 text-center flex flex-col items-center justify-center bg-background-2 border border-white/[0.04]">
+      <!-- Centered gold circle with transparent playing cards PNG -->
+      <div class="w-16 h-16 rounded-full border border-primary/20 bg-primary/5 flex items-center justify-center mb-3 shadow-[inset_0_1px_3px_rgba(155,113,52,0.15)] flex-shrink-0">
+        <img src="/cards.png" alt="Cards" class="w-8 h-8 object-contain" />
+      </div>
+      <p class="font-bold text-primary-light font-cinzel text-lg mb-1">Aucune autre partie disponible</p>
+      <p class="text-xs text-slate-400 font-medium max-w-sm mb-4 leading-relaxed">Soyez le premier à créer une partie et à inviter vos amis !</p>
+      <Button
+        @click="showSettings = true"
+        variant="primary"
+        size="md"
+      >
+        + Créer une partie
+      </Button>
     </div>
 
-    <div v-else class="space-y-2">
+    <div v-else class="space-y-3">
       <div
         v-for="room in gameStore.lobbyRooms"
         :key="room.roomId"
-        class="rounded-xl p-4 flex items-center justify-between transition-all"
-        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);"
+        class="rounded-2xl px-5 py-4 flex items-center gap-6 bg-background-2 border border-primary/30 transition-all hover:border-primary/55"
       >
-        <div class="flex items-center gap-3">
-          <div class="font-mono font-bold text-2xl tracking-widest" style="color: #a855f7;">{{ (room.metadata as any)?.code || (room as any).code || room.roomId.slice(0,4).toUpperCase() }}</div>
-          <div class="text-sm" style="color: #64748b;">
-            {{ room.clients }} / {{ room.maxClients }} joueurs
+        <!-- Left Section: Spade Emblem & Room Metadata -->
+        <div class="flex items-center gap-4 flex-shrink-0">
+          <!-- Circular Gold Spade Suit Icon -->
+          <div class="w-12 h-12 rounded-full border border-primary flex items-center justify-center bg-primary/5 flex-shrink-0">
+            <Spade class="w-6 h-6 text-primary fill-primary" />
+          </div>
+          <div class="space-y-2">
+            <!-- Room code: WHITE (not gold) -->
+            <div class="text-xl font-bold text-white font-cinzel tracking-wider leading-none">
+              {{ (room.metadata as any)?.code || (room as any).code || room.roomId.slice(0,4).toUpperCase() }}
+            </div>
+            <!-- Badges row -->
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1 px-2 py-0.5 rounded border border-white/10 bg-white/[0.03] text-[11px] font-medium text-slate-400">
+                <User class="w-3 h-3 flex-shrink-0" />
+                <span>{{ room.clients }} / {{ room.maxClients }} joueurs</span>
+              </div>
+              <div class="flex items-center gap-1 px-2 py-0.5 rounded border border-white/10 bg-white/[0.03] text-[11px] font-medium text-slate-400">
+                <LayoutGrid class="w-3 h-3 flex-shrink-0" />
+                <span>Partie classique</span>
+              </div>
+            </div>
+            <!-- Creation Elapsed Time -->
+            <div class="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
+              <span>Créée il y a {{ getElapsedTime((room.metadata as any)?.createdAt ?? (room as any).createdAt) }}</span>
+            </div>
           </div>
         </div>
-        <button
+
+        <!-- Center Section: Horizontal Player Slots -->
+        <div class="flex-1 flex items-start gap-4 overflow-hidden">
+          <div
+            v-for="i in room.maxClients"
+            :key="i"
+            class="flex flex-col items-center gap-1 flex-shrink-0"
+          >
+            <!-- Occupied Slot -->
+            <template v-if="getRoomPlayers(room)[i - 1]">
+              <div class="relative flex justify-center">
+                <!-- Crown above host -->
+                <Crown
+                  v-if="getRoomPlayers(room)[i - 1].isHost"
+                  class="absolute -top-4 left-1/2 -translate-x-1/2 w-4 h-4 text-primary fill-primary"
+                />
+                <!-- Avatar circle with gold border for host, muted for others -->
+                <div
+                  class="w-12 h-12 rounded-full flex items-center justify-center"
+                  :class="getRoomPlayers(room)[i - 1].isHost
+                    ? 'border-2 border-primary bg-[#1c1a10]'
+                    : 'border border-slate-700/60 bg-[#161620]'"
+                >
+                  <span
+                    class="text-sm font-bold font-cinzel"
+                    :class="getRoomPlayers(room)[i - 1].isHost ? 'text-primary' : 'text-slate-300'"
+                  >
+                    {{ (getRoomPlayers(room)[i - 1].username || '?').slice(0, 2).toUpperCase() }}
+                  </span>
+                </div>
+              </div>
+              <!-- Username -->
+              <span class="text-[11px] font-medium text-slate-300 max-w-[52px] truncate text-center leading-none">
+                {{ getRoomPlayers(room)[i - 1].username }}
+              </span>
+              <!-- Hôte label -->
+              <span v-if="getRoomPlayers(room)[i - 1].isHost" class="text-[10px] font-semibold text-primary leading-none">
+                Hôte
+              </span>
+            </template>
+
+            <!-- Empty Slot -->
+            <template v-else>
+              <div class="w-12 h-12 rounded-full border border-slate-700/40 bg-[#13131e] flex items-center justify-center">
+                <User class="w-5 h-5 text-slate-600" />
+              </div>
+              <span class="text-[11px] font-medium text-slate-500 text-center leading-none">En attente</span>
+            </template>
+          </div>
+        </div>
+
+        <!-- Right Section: Join Button (Button component) -->
+        <Button
           @click="gameStore.joinGame(room.roomId)"
-          class="px-4 py-2 rounded-lg text-sm font-semibold"
-          style="background: rgba(124,58,237,0.2); color: #a855f7; border: 1px solid rgba(124,58,237,0.3); cursor: pointer;"
+          variant="primary"
+          size="md"
+          :icon="ChevronRight"
+          icon-position="right"
+          class="flex-shrink-0"
         >
-          Rejoindre →
-        </button>
+          Rejoindre
+        </Button>
       </div>
     </div>
   </div>
