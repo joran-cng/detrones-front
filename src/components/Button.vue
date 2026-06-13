@@ -17,6 +17,7 @@ interface Props {
   disabled?: boolean
   type?: 'button' | 'submit' | 'reset'
   fullWidth?: boolean
+  badge?: number | boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -52,7 +53,7 @@ function handleClick(event: MouseEvent) {
 
 // Styling classes
 const classes = computed(() => {
-  const base = 'inline-flex items-center justify-center font-semibold select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 relative overflow-hidden transition-all duration-300'
+  const base = 'inline-flex items-center justify-center font-semibold select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 relative transition-all duration-300'
   
   const variants = {
     primary: props.shade === 'dark'
@@ -100,15 +101,17 @@ const classes = computed(() => {
 <template>
   <button
     :type="type"
-    :class="classes"
+    :class="[classes, 'relative']"
     :disabled="disabled || loading"
     @click="handleClick"
   >
     <!-- Background Shimmer effect for default primary button -->
     <span 
       v-if="variant === 'primary' && shade !== 'dark' && !disabled" 
-      class="absolute w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite] pointer-events-none"
-    ></span>
+      class="absolute inset-0 overflow-hidden pointer-events-none rounded-[inherit]"
+    >
+      <span class="absolute w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite]"></span>
+    </span>
 
     <!-- Loader icon -->
     <span v-if="loading" class="animate-spin mr-1">
@@ -135,6 +138,15 @@ const classes = computed(() => {
       :class="[size === 'sm' ? 'w-3.5 h-3.5' : size === 'lg' ? 'w-5 h-5' : 'w-4 h-4']"
       class="flex-shrink-0"
     />
+
+    <!-- Badge (notification pin) -->
+    <span 
+      v-if="badge"
+      class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center text-[9px] font-black pointer-events-none z-20"
+      style="background: #fbbf24; color: #0f0c00; box-shadow: 0 2px 6px rgba(251,191,36,0.5);"
+    >
+      {{ typeof badge === 'number' && badge > 0 ? (badge > 9 ? '9+' : badge) : '' }}
+    </span>
   </button>
 </template>
 

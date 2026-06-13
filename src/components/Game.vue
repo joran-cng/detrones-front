@@ -27,13 +27,42 @@ import {
   X,
   HelpCircle,
   Hash,
-  AlertCircle
+  AlertCircle,
+  MessageSquare,
 } from '@lucide/vue'
 
 const gameStore = useGameStore()
 
 const showHelpModal = ref(false)
 const activeHelpTab = ref('rules')
+const showChat = ref(false)
+
+// Track unread messages from OTHER players only (not my own messages)
+const unreadCount = ref(0)
+const lastSeenMessageCount = ref(0)
+
+watch(() => gameStore.chatMessages.length, (newLen) => {
+  if (showChat.value) {
+    // Chat is open — mark all as read immediately
+    lastSeenMessageCount.value = newLen
+    unreadCount.value = 0
+    return
+  }
+  // Count only new messages from other players
+  const newMessages = gameStore.chatMessages.slice(lastSeenMessageCount.value)
+  const myUsername = me.value?.username
+  const othersCount = newMessages.filter((msg: any) => msg.sender !== myUsername).length
+  unreadCount.value += othersCount
+  lastSeenMessageCount.value = newLen
+})
+
+watch(showChat, (val) => {
+  if (val) {
+    // Mark all as read when opening chat
+    lastSeenMessageCount.value = gameStore.chatMessages.length
+    unreadCount.value = 0
+  }
+})
 
 
 // ── All data comes from reactive store refs — no more reading room.state ───
@@ -504,55 +533,64 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
     <!-- Left Side: Game Board (includes header and game view) -->
     <div class="flex-1 flex flex-col min-h-0 relative z-10">
       <!-- Game Header -->
-      <div class="flex items-center justify-between px-6 py-3"
-        style="background: transparent; flex-shrink: 0;">
-        <div class="flex items-center gap-3">
+      <div class="flex flex-col px-6 py-3" style="background: transparent; flex-shrink: 0;">
+        <!-- Row 1: Buttons -->
+        <div class="flex items-center justify-between">
+          <!-- Left: Help button -->
+          <div class="flex items-center gap-2">
+            <Button
+              @click="showHelpModal = true"
+              variant="secondary"
+              size="md"
+              :icon="HelpCircle"
+            />
+          </div>
+          <!-- Right: Action buttons -->
+          <div class="flex gap-2 items-center">
+            <Button v-if="gameStore.isHost && (!phase || phase === 'LOBBY')"
+              @click="startGame"
+              variant="primary"
+              size="md"
+              :icon="Play"
+            />
+            <!-- Chat button with unread badge -->
+            <Button
+              @click="showChat = !showChat"
+              :variant="showChat ? 'primary' : 'secondary'"
+              size="md"
+              :icon="MessageSquare"
+              :badge="unreadCount > 0 ? unreadCount : false"
+            />
+            <Button @click="gameStore.leaveGame"
+              variant="danger"
+              size="md"
+              :icon="LogOut"
+            />
+          </div>
+        </div>
+        <!-- Row 2: Room info badges — mobile only, spread left/right -->
+        <div class="flex items-center justify-between mt-2 lg:hidden">
           <!-- Room Code Badge -->
-          <div class="flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-semibold backdrop-blur-md transition-all duration-300 hover:border-white/20"
+          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold backdrop-blur-md"
             style="background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.08); color: #cbd5e1;">
-            <Hash class="w-4 h-4 text-primary-light" />
+            <Hash class="w-3 h-3 text-primary-light" />
             <span>Code:</span>
             <span class="font-mono font-bold text-white tracking-wider uppercase" data-testid="room-code">{{ gameStore.currentRoomId }}</span>
           </div>
-
           <!-- Player Count Badge -->
-          <div class="flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-semibold backdrop-blur-md transition-all duration-300 hover:border-white/20"
+          <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold backdrop-blur-md"
             style="background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.08); color: #cbd5e1;">
-            <Users class="w-4 h-4 text-primary-light" />
+            <Users class="w-3 h-3 text-primary-light" />
             <span>Joueurs:</span>
             <span class="font-bold text-white">{{ players.length }}</span>
           </div>
-
           <!-- Spectator badge -->
           <div v-if="amISpectator"
-            class="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-bold animate-pulse"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold animate-pulse"
             style="background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.08);">
-            <Eye class="w-4 h-4 text-slate-400" />
-            <span>Mode Spectateur</span>
+            <Eye class="w-3 h-3 text-slate-400" />
+            <span>Spec.</span>
           </div>
-        </div>
-        <div class="flex gap-3 items-center">
-          <Button
-            @click="showHelpModal = true"
-            variant="secondary"
-            size="md"
-            :icon="HelpCircle"
-          />
-          <Button v-if="gameStore.isHost && (!phase || phase === 'LOBBY')"
-            @click="startGame"
-            variant="primary"
-            size="md"
-            :icon="Play"
-          >
-            Lancer la partie
-          </Button>
-          <Button @click="gameStore.leaveGame"
-            variant="danger"
-            size="md"
-            :icon="LogOut"
-          >
-            Quitter
-          </Button>
         </div>
       </div>
 
@@ -560,7 +598,7 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
       <div class="flex-1 flex flex-col relative min-h-0">
 
         <!-- ── TABLE ARENA ─────────────────────────────────────────────────── -->
-        <div class="flex-1 relative flex items-center justify-center min-h-0 p-4">
+        <div class="flex-1 relative flex items-center justify-center min-h-0 p-1 sm:p-4">
 
           <!-- ── Cinematic overlay ─────────────────────────────────────────── -->
           <Transition name="cinematic">
@@ -591,7 +629,7 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
           <!-- ── Rounded-rectangle felt table ─────────────────────────────── -->
           <!-- Inset from arena so players sit OUTSIDE the table edges        -->
           <div class="table-felt-wrapper absolute pointer-events-none"
-            style="inset: 10% 22%; border-radius: 2rem;">
+            style="border-radius: 2rem;">
 
             <!-- Wood border -->
             <div class="absolute inset-0"
@@ -863,9 +901,9 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
         </div><!-- /table arena wrapper -->
 
         <!-- ── My hand ──────────────────────────────────────────────────────── -->
-        <div v-if="!amISpectator" class="px-4 pb-4 pt-2" style="flex-shrink: 0; background: linear-gradient(0deg, rgba(0,0,0,0.4) 0%, transparent 100%);">
-          <div class="flex justify-center items-end pb-2 px-2 pt-6" ref="handContainerRef"
-            style="overflow-x: auto; -webkit-overflow-scrolling: touch; min-height: 110px;">
+        <div v-if="!amISpectator" class="px-2 pb-3 pt-1 sm:px-4 sm:pb-4 sm:pt-2" style="flex-shrink: 0; background: linear-gradient(0deg, rgba(0,0,0,0.4) 0%, transparent 100%);">
+          <div class="flex flex-wrap justify-center items-end gap-y-2 pb-2 px-2 pt-6" ref="handContainerRef"
+            style="min-height: 110px;">
             <div v-for="(card, idx) in myHand" :key="`${card.suit}-${card.rank}-${idx}`"
               :data-rank="card.rank"
               :data-suit="card.suit"
@@ -880,7 +918,7 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
                 height: '90px',
                 background: (isExchangePhase && isExchangeSelected(card)) ? '#fff7ed' : isSelected(card) ? '#f0f0ff' : (!isExchangePhase && !isPlayable(card)) ? '#cbd5e1' : '#fefefe',
                 border: (isExchangePhase && isExchangeSelected(card)) ? '2px solid var(--primary)' : isSelected(card) ? '2px solid var(--primary-light)' : '1px solid #94a3b8',
-                marginLeft: idx === 0 ? '0' : (myHand.length > 10 ? '-38px' : myHand.length > 6 ? '-28px' : '-14px'),
+                marginLeft: idx === 0 ? '0' : (myHand.length > 10 ? '-30px' : myHand.length > 6 ? '-20px' : '-10px'),
                 position: 'relative',
                 zIndex: idx,
                 transform: (isExchangePhase && isExchangeSelected(card)) || isSelected(card) ? 'translateY(-10px)' : 'translateY(0)',
@@ -923,10 +961,40 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
       </div>
     </div><!-- /Left Side: Game Board -->
 
-        <!-- Right Side: Chat -->
-    <div class="w-80 flex-shrink-0 p-3 flex flex-col h-full relative z-10">
-      <Chat />
-    </div>
+    <!-- Slide-in Chat Panel -->
+    <Transition name="chat-slide">
+      <div v-if="showChat"
+        class="absolute top-0 right-0 h-full z-40 flex flex-col"
+        style="width: min(340px, 100vw); background: rgba(10, 14, 24, 0.97); backdrop-filter: blur(20px); border-left: 1px solid rgba(255,255,255,0.07); box-shadow: -8px 0 40px rgba(0,0,0,0.6);"
+      >
+        <!-- Chat header with close button -->
+        <div class="flex items-center justify-between px-4 py-3 border-b" style="border-color: rgba(255,255,255,0.07);">
+          <div class="flex items-center gap-2 text-sm font-semibold text-primary">
+            <MessageSquare class="w-4 h-4 text-primary-light" />
+            <span>Chat de la partie</span>
+          </div>
+          <button
+            @click="showChat = false"
+            class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all"
+          >
+            <X class="w-4 h-4" />
+          </button>
+        </div>
+        <!-- Chat body fills remaining height -->
+        <div class="flex-1 min-h-0">
+          <Chat />
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Overlay behind chat panel (click to close) -->
+    <Transition name="fade">
+      <div v-if="showChat"
+        class="absolute inset-0 z-30"
+        style="background: rgba(0,0,0,0.3); backdrop-filter: blur(1px);"
+        @click="showChat = false"
+      />
+    </Transition>
 
     <!-- Modale de Fin de Partie (RESULTS) -->
     <div v-if="phase === 'RESULTS'"
@@ -1193,5 +1261,44 @@ function playerCardsStyle(idx: number, total: number): Record<string, string> {
   0%   { opacity: 0.4; transform: scale(0.85); }
   50%  { opacity: 1;   transform: scale(1.15); }
   100% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* ── Chat slide-in panel ────────────────────────────────────────────────── */
+.chat-slide-enter-active {
+  animation: chatSlideIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.chat-slide-leave-active {
+  animation: chatSlideOut 0.25s cubic-bezier(0.55, 0, 1, 0.45) forwards;
+}
+@keyframes chatSlideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes chatSlideOut {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(100%); opacity: 0; }
+}
+
+/* ── Overlay fade ───────────────────────────────────────────────────────── */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+/* ── Table felt: responsive inset ───────────────────────────────────────── */
+.table-felt-wrapper {
+  inset: 10% 8%;
+}
+@media (min-width: 640px) {
+  .table-felt-wrapper {
+    inset: 10% 18%;
+  }
+}
+@media (min-width: 1024px) {
+  .table-felt-wrapper {
+    inset: 10% 22%;
+  }
 }
 </style>

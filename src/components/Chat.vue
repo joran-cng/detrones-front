@@ -3,7 +3,7 @@ import { ref, nextTick, watch } from 'vue'
 import { useGameStore } from '../stores/game'
 import Button from './Button.vue'
 import Input from './Input.vue'
-import { MessageSquare, Send } from '@lucide/vue'
+import { Send } from '@lucide/vue'
 
 const gameStore = useGameStore()
 const messageInput = ref('')
@@ -25,12 +25,7 @@ watch(() => gameStore.chatMessages.length, () => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full rounded-xl overflow-hidden border border-white/5 shadow-2xl">
-    <div class="px-4 py-3 font-semibold text-sm flex items-center gap-2 text-primary" style="background: rgba(155, 113, 52, 0.03); border-bottom: 1px solid rgba(255,255,255,0.08);">
-      <MessageSquare class="w-4 h-4 text-primary-light" />
-      <span>Chat de la partie</span>
-    </div>
-
+  <div class="flex flex-col h-full overflow-hidden">
     <div ref="messagesContainer" class="flex-1 overflow-y-auto p-3 space-y-2">
       <div v-if="gameStore.chatMessages.length === 0" class="text-center text-sm py-4" style="color: #475569;">
         Aucun message pour l'instant...
