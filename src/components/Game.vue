@@ -26,7 +26,8 @@ import {
   Tornado,
   X,
   HelpCircle,
-  Hash
+  Hash,
+  AlertCircle
 } from '@lucide/vue'
 
 const gameStore = useGameStore()
@@ -393,11 +394,13 @@ const currentEventStyle = computed(() => {
           class="px-4 py-3 rounded-xl flex items-start gap-3 shadow-2xl border pointer-events-auto backdrop-blur-md"
           :style="notif.sender && notif.sender.includes('Président')
             ? 'background: rgba(245, 158, 11, 0.18); border-color: rgba(245, 158, 11, 0.45); box-shadow: 0 8px 32px rgba(245, 158, 11, 0.2); color: #fef3c7;' 
-            : 'background: rgba(var(--primary-rgb), 0.18); border-color: rgba(var(--primary-rgb), 0.35); box-shadow: 0 8px 32px rgba(var(--primary-rgb), 0.15); color: #fef3c7;' ">
+            : notif.sender && notif.sender.includes('Erreur')
+              ? 'background: rgba(239, 68, 68, 0.18); border-color: rgba(239, 68, 68, 0.45); box-shadow: 0 8px 32px rgba(239, 68, 68, 0.15); color: #fecaca;'
+              : 'background: rgba(var(--primary-rgb), 0.18); border-color: rgba(var(--primary-rgb), 0.35); box-shadow: 0 8px 32px rgba(var(--primary-rgb), 0.15); color: #fef3c7;' ">
           <component 
-            :is="notif.sender && notif.sender.includes('Président') ? Crown : Zap" 
+            :is="notif.sender && notif.sender.includes('Président') ? Crown : (notif.sender && notif.sender.includes('Erreur') ? AlertCircle : Zap)" 
             class="w-5 h-5 flex-shrink-0 mt-0.5" 
-            :class="notif.sender && notif.sender.includes('Président') ? 'text-amber-400' : 'text-primary'"
+            :class="notif.sender && notif.sender.includes('Président') ? 'text-amber-400' : (notif.sender && notif.sender.includes('Erreur') ? 'text-red-400' : 'text-primary')"
           />
           <div class="flex-1 min-w-0">
             <span class="block font-black uppercase tracking-widest opacity-70 mb-0.5" style="font-size: 0.6rem;">{{ notif.sender }}</span>
@@ -416,51 +419,51 @@ const currentEventStyle = computed(() => {
     <!-- Left Side: Game Board (includes header and game view) -->
     <div class="flex-1 flex flex-col min-h-0 relative z-10">
       <!-- Game Header -->
-      <div class="flex items-center justify-between px-6 py-4"
-        style="background: transparent; border-bottom: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;">
+      <div class="flex items-center justify-between px-6 py-3"
+        style="background: transparent; flex-shrink: 0;">
         <div class="flex items-center gap-3">
           <!-- Room Code Badge -->
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold backdrop-blur-md transition-all duration-300 hover:border-white/20"
+          <div class="flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-semibold backdrop-blur-md transition-all duration-300 hover:border-white/20"
             style="background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.08); color: #cbd5e1;">
-            <Hash class="w-3.5 h-3.5 text-primary-light" />
+            <Hash class="w-4 h-4 text-primary-light" />
             <span>Code:</span>
             <span class="font-mono font-bold text-white tracking-wider uppercase" data-testid="room-code">{{ gameStore.currentRoomId }}</span>
           </div>
 
           <!-- Player Count Badge -->
-          <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold backdrop-blur-md transition-all duration-300 hover:border-white/20"
+          <div class="flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-semibold backdrop-blur-md transition-all duration-300 hover:border-white/20"
             style="background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.08); color: #cbd5e1;">
-            <Users class="w-3.5 h-3.5 text-primary-light" />
+            <Users class="w-4 h-4 text-primary-light" />
             <span>Joueurs:</span>
             <span class="font-bold text-white">{{ players.length }}</span>
           </div>
 
           <!-- Spectator badge -->
           <div v-if="amISpectator"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold animate-pulse"
+            class="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-bold animate-pulse"
             style="background: rgba(255,255,255,0.04); color: #94a3b8; border: 1px solid rgba(255,255,255,0.08);">
-            <Eye class="w-3.5 h-3.5 text-slate-400" />
+            <Eye class="w-4 h-4 text-slate-400" />
             <span>Mode Spectateur</span>
           </div>
         </div>
         <div class="flex gap-3 items-center">
+          <Button
+            @click="showHelpModal = true"
+            variant="secondary"
+            size="md"
+            :icon="HelpCircle"
+          />
           <Button v-if="gameStore.isHost && (!phase || phase === 'LOBBY')"
             @click="startGame"
             variant="primary"
-            size="sm"
+            size="md"
             :icon="Play"
           >
             Lancer la partie
           </Button>
-          <Button
-            @click="showHelpModal = true"
-            variant="secondary"
-            size="sm"
-            :icon="HelpCircle"
-          />
           <Button @click="gameStore.leaveGame"
             variant="danger"
-            size="sm"
+            size="md"
             :icon="LogOut"
           >
             Quitter
@@ -710,7 +713,7 @@ const currentEventStyle = computed(() => {
     </div>
 
     <!-- Right Side: Chat -->
-    <div class="w-80 flex-shrink-0 p-3 flex flex-col h-full relative z-10" style="border-left: 1px solid rgba(255,255,255,0.06);">
+    <div class="w-80 flex-shrink-0 p-3 flex flex-col h-full relative z-10">
       <Chat />
     </div>
 

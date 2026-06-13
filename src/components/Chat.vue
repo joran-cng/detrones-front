@@ -2,6 +2,7 @@
 import { ref, nextTick, watch } from 'vue'
 import { useGameStore } from '../stores/game'
 import Button from './Button.vue'
+import Input from './Input.vue'
 import { MessageSquare, Send } from '@lucide/vue'
 
 const gameStore = useGameStore()
@@ -24,10 +25,10 @@ watch(() => gameStore.chatMessages.length, () => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full rounded-xl overflow-hidden" style="background: rgba(15,15,26,0.85); border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(12px);">
-    <div class="px-3 py-2 font-semibold text-sm flex items-center gap-1.5 text-primary" style="border-bottom: 1px solid rgba(255,255,255,0.08);">
-      <MessageSquare class="w-4.5 h-4.5 text-primary" />
-      <span>Chat</span>
+  <div class="flex flex-col h-full rounded-xl overflow-hidden border border-white/5 shadow-2xl">
+    <div class="px-4 py-3 font-semibold text-sm flex items-center gap-2 text-primary" style="background: rgba(155, 113, 52, 0.03); border-bottom: 1px solid rgba(255,255,255,0.08);">
+      <MessageSquare class="w-4 h-4 text-primary-light" />
+      <span>Chat de la partie</span>
     </div>
 
     <div ref="messagesContainer" class="flex-1 overflow-y-auto p-3 space-y-2">
@@ -40,22 +41,20 @@ watch(() => gameStore.chatMessages.length, () => {
       </div>
     </div>
 
-    <div class="p-2 flex gap-2" style="border-top: 1px solid rgba(255,255,255,0.08);">
-      <input
+    <div class="p-3 flex gap-2 items-center" style="border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0, 0, 0, 0.1);">
+      <Input
         v-model="messageInput"
         @keyup.enter="sendMessage"
         placeholder="Message..."
-        class="flex-1 rounded-lg px-3 py-2 text-sm outline-none"
-        style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: #f1f5f9;"
+        class="flex-1"
       />
       <Button
         @click="sendMessage"
         variant="primary"
-        size="sm"
+        size="md"
         :icon="Send"
-        class="!rounded-lg"
+        class="flex-shrink-0"
       />
     </div>
   </div>
 </template>
-

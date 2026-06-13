@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useSlots } from 'vue'
 import * as Icons from '@lucide/vue'
+
+const slots = useSlots()
+const hasLabel = computed(() => !!slots.default)
+const hasGap = computed(() => !!resolvedIcon.value && hasLabel.value)
+const isIconOnly = computed(() => !!resolvedIcon.value && !hasLabel.value)
 
 interface Props {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost'
@@ -58,10 +63,25 @@ const classes = computed(() => {
     ghost: 'text-[#9496a8] hover:text-white hover:bg-white/[0.02] border-0'
   }
   
-  const sizes = {
-    sm: 'px-3 py-1.5 text-xs gap-1.5 rounded-lg',
-    md: 'px-4 py-3 text-sm gap-2 rounded-xl',
-    lg: 'px-6 py-3.5 text-base gap-2.5 rounded-2xl'
+  const sizes = computed(() => {
+    if (isIconOnly.value) {
+      return {
+        sm: 'px-1.5 py-1.5 text-xs rounded-lg',
+        md: 'px-3 py-3 text-sm rounded-xl',
+        lg: 'px-3.5 py-3.5 text-base rounded-2xl'
+      }
+    }
+    return {
+      sm: 'px-3 py-1.5 text-xs rounded-lg',
+      md: 'px-4 py-3 text-sm rounded-xl',
+      lg: 'px-6 py-3.5 text-base rounded-2xl'
+    }
+  })
+
+  const gaps = {
+    sm: 'gap-1.5',
+    md: 'gap-2',
+    lg: 'gap-2.5'
   }
   
   let variantClass = variants[props.variant]
@@ -71,8 +91,9 @@ const classes = computed(() => {
 
   const width = props.fullWidth ? 'w-full' : ''
   const state = (props.disabled || props.loading) ? 'opacity-50 cursor-not-allowed pointer-events-none scale-100' : 'cursor-pointer active:scale-[0.98]'
+  const gapClass = hasGap.value ? gaps[props.size] : ''
 
-  return `${base} ${variantClass} ${sizes[props.size]} ${width} ${state}`
+  return `${base} ${variantClass} ${sizes.value[props.size]} ${gapClass} ${width} ${state}`
 })
 </script>
 
@@ -103,7 +124,7 @@ const classes = computed(() => {
     />
 
     <!-- Button label slot -->
-    <span class="relative z-10 flex items-center gap-1.5">
+    <span v-if="$slots.default" class="relative z-10 flex items-center gap-1.5">
       <slot />
     </span>
 

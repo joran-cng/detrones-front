@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 
 interface Props {
-  label: string
+  label?: string
   type?: 'text' | 'email' | 'password' | 'number' | 'tel'
   modelValue?: string
   placeholder?: string
@@ -25,7 +25,7 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
 }>()
 
-const inputId = computed(() => props.id || `input-${props.label.toLowerCase().replace(/\s+/g, '-')}`)
+const inputId = computed(() => props.id || `input-${(props.label || '').toLowerCase().replace(/\s+/g, '-') || Math.random().toString(36).substring(2, 9)}`)
 const showPassword = ref(false)
 const isFocused = ref(false)
 
@@ -41,6 +41,7 @@ const resolvedType = computed(() => {
   <div class="flex flex-col gap-1.5 w-full">
     <!-- Label -->
     <label
+      v-if="label"
       :for="inputId"
       class="text-sm font-semibold tracking-wide select-none transition-colors duration-200"
       :class="isFocused ? 'text-slate-200' : 'text-slate-400'"

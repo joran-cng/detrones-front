@@ -215,6 +215,20 @@ export const useGameStore = defineStore('game', () => {
         r.onMessage('error', (err: any) => {
             console.error('[game error]', err)
             gameErrorMessage.value = err.message
+            
+            // Push to system notifications list for screen display
+            const id = Date.now() + Math.random().toString(36).substring(2, 9)
+            systemNotifications.value = [...systemNotifications.value, {
+                id,
+                sender: '⚠️ Erreur',
+                text: err.message || 'Une erreur est survenue.'
+            }]
+            
+            // Auto-clear notification after 4.5s
+            setTimeout(() => {
+                systemNotifications.value = systemNotifications.value.filter((n: any) => n.id !== id)
+            }, 4500)
+
             setTimeout(() => {
                 if (gameErrorMessage.value === err.message) {
                     gameErrorMessage.value = ''
